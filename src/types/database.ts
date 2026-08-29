@@ -81,6 +81,94 @@ export type Database = {
           },
         ]
       }
+      catalog_products: {
+        Row: {
+          active: boolean
+          brand: string | null
+          category: string
+          created_at: string
+          default_unit: string | null
+          display_name: string
+          id: string
+          image_ready: boolean
+          image_url: string | null
+          manually_edited: boolean
+          normalized_name: string
+          preferred_retailer_id: string | null
+          preferred_store_hint: string | null
+          search_aliases: string[]
+          search_text: string
+          source: string
+          source_notes: string | null
+          subcategory: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          brand?: string | null
+          category: string
+          created_at?: string
+          default_unit?: string | null
+          display_name: string
+          id: string
+          image_ready?: boolean
+          image_url?: string | null
+          manually_edited?: boolean
+          normalized_name: string
+          preferred_retailer_id?: string | null
+          preferred_store_hint?: string | null
+          search_aliases?: string[]
+          search_text?: string
+          source?: string
+          source_notes?: string | null
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          brand?: string | null
+          category?: string
+          created_at?: string
+          default_unit?: string | null
+          display_name?: string
+          id?: string
+          image_ready?: boolean
+          image_url?: string | null
+          manually_edited?: boolean
+          normalized_name?: string
+          preferred_retailer_id?: string | null
+          preferred_store_hint?: string | null
+          search_aliases?: string[]
+          search_text?: string
+          source?: string
+          source_notes?: string | null
+          subcategory?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "catalog_products_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["name"]
+          },
+          {
+            foreignKeyName: "catalog_products_category_subcategory_fkey"
+            columns: ["category", "subcategory"]
+            isOneToOne: false
+            referencedRelation: "product_subcategories"
+            referencedColumns: ["category", "name"]
+          },
+          {
+            foreignKeyName: "catalog_products_preferred_retailer_id_fkey"
+            columns: ["preferred_retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           hero_placeholder: string
@@ -105,6 +193,7 @@ export type Database = {
       grocery_items: {
         Row: {
           added_by: string | null
+          catalog_product_id: string | null
           category: string
           checked: boolean
           created_at: string
@@ -117,6 +206,7 @@ export type Database = {
         }
         Insert: {
           added_by?: string | null
+          catalog_product_id?: string | null
           category?: string
           checked?: boolean
           created_at?: string
@@ -129,6 +219,7 @@ export type Database = {
         }
         Update: {
           added_by?: string | null
+          catalog_product_id?: string | null
           category?: string
           checked?: boolean
           created_at?: string
@@ -140,6 +231,13 @@ export type Database = {
           retailer_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "grocery_items_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "grocery_items_household_id_fkey"
             columns: ["household_id"]
@@ -184,6 +282,81 @@ export type Database = {
             columns: ["household_id"]
             isOneToOne: false
             referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      household_product_preferences: {
+        Row: {
+          acceptable_brands: string[]
+          acceptable_stores: string[]
+          brand_rigidity: string
+          created_at: string
+          household_id: string
+          id: string
+          label: string
+          notes: string | null
+          preferred_brand: string | null
+          preferred_retailer_id: string | null
+          preferred_size: string | null
+          preferred_store: string | null
+          preferred_variant: string | null
+          scope_key: string
+          scope_type: string
+          typical_quantity: string | null
+          updated_at: string
+        }
+        Insert: {
+          acceptable_brands?: string[]
+          acceptable_stores?: string[]
+          brand_rigidity?: string
+          created_at?: string
+          household_id: string
+          id?: string
+          label: string
+          notes?: string | null
+          preferred_brand?: string | null
+          preferred_retailer_id?: string | null
+          preferred_size?: string | null
+          preferred_store?: string | null
+          preferred_variant?: string | null
+          scope_key: string
+          scope_type: string
+          typical_quantity?: string | null
+          updated_at?: string
+        }
+        Update: {
+          acceptable_brands?: string[]
+          acceptable_stores?: string[]
+          brand_rigidity?: string
+          created_at?: string
+          household_id?: string
+          id?: string
+          label?: string
+          notes?: string | null
+          preferred_brand?: string | null
+          preferred_retailer_id?: string | null
+          preferred_size?: string | null
+          preferred_store?: string | null
+          preferred_variant?: string | null
+          scope_key?: string
+          scope_type?: string
+          typical_quantity?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_product_preferences_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_product_preferences_preferred_retailer_id_fkey"
+            columns: ["preferred_retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
             referencedColumns: ["id"]
           },
         ]
@@ -427,9 +600,93 @@ export type Database = {
           },
         ]
       }
+      product_alternatives: {
+        Row: {
+          alternative_product_id: string
+          created_at: string
+          id: string
+          match_quality: string
+          notes: string | null
+          product_id: string
+        }
+        Insert: {
+          alternative_product_id: string
+          created_at?: string
+          id?: string
+          match_quality: string
+          notes?: string | null
+          product_id: string
+        }
+        Update: {
+          alternative_product_id?: string
+          created_at?: string
+          id?: string
+          match_quality?: string
+          notes?: string | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_alternatives_alternative_product_id_fkey"
+            columns: ["alternative_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_alternatives_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_categories: {
+        Row: {
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      product_subcategories: {
+        Row: {
+          category: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          category: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          category?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_subcategories_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "product_categories"
+            referencedColumns: ["name"]
+          },
+        ]
+      }
       products: {
         Row: {
           brand: string | null
+          catalog_product_id: string | null
           created_at: string
           created_by: string | null
           department_key: string | null
@@ -448,6 +705,7 @@ export type Database = {
         }
         Insert: {
           brand?: string | null
+          catalog_product_id?: string | null
           created_at?: string
           created_by?: string | null
           department_key?: string | null
@@ -466,6 +724,7 @@ export type Database = {
         }
         Update: {
           brand?: string | null
+          catalog_product_id?: string | null
           created_at?: string
           created_by?: string | null
           department_key?: string | null
@@ -483,6 +742,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "products_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "products_department_key_fkey"
             columns: ["department_key"]
@@ -599,6 +865,7 @@ export type Database = {
       }
       recipe_ingredients: {
         Row: {
+          catalog_product_id: string | null
           id: string
           name: string
           qty: string | null
@@ -607,6 +874,7 @@ export type Database = {
           usual_retailer_id: string | null
         }
         Insert: {
+          catalog_product_id?: string | null
           id?: string
           name: string
           qty?: string | null
@@ -615,6 +883,7 @@ export type Database = {
           usual_retailer_id?: string | null
         }
         Update: {
+          catalog_product_id?: string | null
           id?: string
           name?: string
           qty?: string | null
@@ -623,6 +892,13 @@ export type Database = {
           usual_retailer_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "recipe_ingredients_recipe_id_fkey"
             columns: ["recipe_id"]
@@ -912,6 +1188,13 @@ export type Database = {
         Args: { target_household_id: string }
         Returns: boolean
       }
+      product_search_normalize: { Args: { input: string }; Returns: string }
+      seed_starter_household_preferences: {
+        Args: { target_household_id: string }
+        Returns: undefined
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never
