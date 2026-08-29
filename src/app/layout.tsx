@@ -1,30 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Lora } from "next/font/google";
 import { ServiceWorkerRegistration } from "./sw-register";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const lora = Lora({
+  variable: "--font-lora",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
 });
 
 export const metadata: Metadata = {
   title: {
-    default: "Brown Family Home",
-    template: "%s · Brown Family Home",
+    default: "HomeAssist",
+    template: "%s · HomeAssist",
   },
   description:
-    "Shop, watch prices, and plan rooms for the Brown family home — all in one place.",
+    "Grocery list, pantry, deals, a price-watch list, and room-by-room tracking for the household — all in one place.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Brown Family Home",
+    title: "HomeAssist",
   },
 };
 
@@ -33,19 +30,13 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fafaf8" },
-    { media: "(prefers-color-scheme: dark)", color: "#181b18" },
-  ],
+  themeColor: "#faf8f4",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="flex min-h-full flex-col bg-surface-50 text-surface-900">
+    <html lang="en" className={`${lora.variable} h-full antialiased`}>
+      <body className="shiplap-bg flex min-h-full flex-col text-ink">
         {children}
         <ServiceWorkerRegistration />
       </body>

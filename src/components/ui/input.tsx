@@ -8,8 +8,8 @@ export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttribute
         ref={ref}
         type={type}
         className={cn(
-          "h-11 w-full rounded-(--radius-md) border border-surface-300 bg-surface-0 px-3 text-sm text-surface-900 placeholder:text-surface-400",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400",
+          "h-11 w-full rounded-(--radius-sm) border border-line bg-white px-3.5 text-sm text-ink placeholder:text-muted2",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oak/60",
           "disabled:cursor-not-allowed disabled:opacity-50",
           className,
         )}

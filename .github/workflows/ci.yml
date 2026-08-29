@@ -20,8 +20,12 @@ jobs:
 
       - run: npm run lint
 
-      - run: npx tsc --noEmit
+      - run: npm run test
 
+      # `next build` runs the TypeScript check itself — it needs the app
+      # route tree to exist first to generate the typed-routes ambient
+      # types (LayoutProps/PageProps), so a standalone `tsc --noEmit`
+      # before this step would fail on those. Build is the real typecheck.
       - name: Build
         run: npm run build
         env:
