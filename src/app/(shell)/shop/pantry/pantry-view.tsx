@@ -2,20 +2,25 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { Plus } from "lucide-react";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { HeroImage } from "@/components/ui/hero-image";
 import { ProductImage } from "@/components/ui/product-image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
 import { PANTRY_HERO_IMAGE } from "@/lib/assets";
 import { formatCents } from "@/lib/money";
 import type { PantryProduct } from "@/lib/data/pantry";
-import { addPantryItemToTrip } from "./actions";
+import type { CatalogProduct } from "@/lib/data/catalog";
+import { addPantryItemToTrip, addPantryRegularBuy } from "./actions";
 
 export function PantryView({ items }: { items: PantryProduct[] }) {
   const [search, setSearch] = React.useState("");
+  const [addOpen, setAddOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
   const router = useRouter();
   const showToast = useToast();
@@ -33,6 +38,22 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
     });
   }
 
+  function addRegularBuy(title: string, product?: CatalogProduct) {
+    startTransition(async () => {
+      const res = await addPantryRegularBuy(title, {
+        catalogProductId: product?.id ?? null,
+        imageUrl: product?.image_ready ? product.image_url : null,
+        packageDetail: product?.default_unit ?? null,
+      });
+      if (!res.ok) showToast(res.message);
+      else {
+        setAddOpen(false);
+        showToast(`${title} added to Pantry`);
+        router.refresh();
+      }
+    });
+  }
+
   return (
     <div className="pb-8">
       <div className="px-5 pt-4 pb-2.5">
@@ -40,9 +61,22 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
       </div>
       <ShopTabs current="/shop/pantry" />
 
-      <div className="mb-3 px-5">
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pantry" />
+      <div className="mb-3 flex gap-2 px-5">
+        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search pantry" className="flex-1" />
+        <Button size="icon" onClick={() => setAddOpen(true)} aria-label="Add to Pantry">
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
+
+      <BottomSheet open={addOpen} onClose={() => setAddOpen(false)}>
+        <div className="mb-3 text-sm font-semibold">Add to Pantry</div>
+        <ProductPicker
+          autoFocus
+          placeholder="Search products…"
+          onSelect={(product) => addRegularBuy(product.display_name, product)}
+          onCustom={(name) => addRegularBuy(name)}
+        />
+      </BottomSheet>
 
       <div className="mx-5 mb-3.5">
         <HeroImage
@@ -60,11 +94,7 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
         <div className="px-5">
           <EmptyState
             title={items.length === 0 ? "No pantry items yet" : "No pantry items match"}
-            description={
-              items.length === 0
-                ? "Mark a product as a Regular Buy from any product's detail view and it'll show up here."
-                : undefined
-            }
+            description={items.length === 0 ? "Tap + above to add a staple you always keep on hand." : undefined}
           />
         </div>
       ) : (

@@ -2,24 +2,23 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { storeBadge } from "@/lib/assets";
 import type { GroceryItem } from "@/lib/data/grocery";
-import { CATEGORY_LABEL, CATEGORY_ORDER } from "@/lib/grocery-categories";
+import type { CatalogProduct } from "@/lib/data/catalog";
+import { CATEGORY_LABEL, CATEGORY_ORDER, mapCatalogCategoryToGroceryCategory } from "@/lib/grocery-categories";
 import { addGroceryItem, clearPurchasedItems, toggleGroceryItem } from "./actions";
 
 type ListTab = "all" | "tobuy" | "purchased";
 
 export function GroceryListView({ items }: { items: GroceryItem[] }) {
   const [tab, setTab] = React.useState<ListTab>("all");
-  const [newItem, setNewItem] = React.useState("");
-  const [pending, startTransition] = React.useTransition();
+  const [, startTransition] = React.useTransition();
   const router = useRouter();
   const showToast = useToast();
 
@@ -37,12 +36,20 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
     items: visible.filter((i) => i.category === cat),
   })).filter((g) => g.items.length > 0);
 
-  function submitAdd() {
-    const text = newItem.trim();
-    if (!text) return;
-    setNewItem("");
+  function submitAddProduct(product: CatalogProduct) {
     startTransition(async () => {
-      const res = await addGroceryItem(text);
+      const res = await addGroceryItem(product.display_name, {
+        catalogProductId: product.id,
+        category: mapCatalogCategoryToGroceryCategory(product.category),
+      });
+      if (!res.ok) showToast(res.message);
+      else router.refresh();
+    });
+  }
+
+  function submitAddCustom(name: string) {
+    startTransition(async () => {
+      const res = await addGroceryItem(name);
       if (!res.ok) showToast(res.message);
       else router.refresh();
     });
@@ -75,17 +82,8 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
 
       <ShopTabs current="/shop/list" />
 
-      <div className="mb-3 flex gap-2 px-5">
-        <Input
-          value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submitAdd()}
-          placeholder="What do we need?"
-          className="flex-1"
-        />
-        <Button onClick={submitAdd} disabled={pending}>
-          Add
-        </Button>
+      <div className="mb-3 px-5">
+        <ProductPicker placeholder="What do we need?" onSelect={submitAddProduct} onCustom={submitAddCustom} />
       </div>
 
       <div className="mb-4 flex items-center justify-between px-5">
@@ -171,12 +169,6 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
           </Button>
         </div>
       ) : null}
-
-      <div className="fixed right-4 left-4 z-[120] mx-auto max-w-md" style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.75rem)" }}>
-        <Button size="lg" className="w-full shadow-[0_12px_28px_rgba(29,29,27,.25)]" onClick={submitAdd}>
-          <Plus className="h-4 w-4" /> Add Item
-        </Button>
-      </div>
     </div>
   );
 }

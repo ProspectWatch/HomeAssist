@@ -16,6 +16,7 @@ export type WatchDraft = {
   athleteId: string;
   size: string;
   fit: string;
+  catalogProductId?: string;
 };
 
 export type OwnDraft = {
@@ -26,6 +27,7 @@ export type OwnDraft = {
   purchasePrice: string;
   purchaseDate: string;
   warrantyUntil: string;
+  catalogProductId?: string;
 };
 
 async function resolveRetailerId(supabase: SupabaseClient, name: string): Promise<string | null> {
@@ -48,6 +50,7 @@ export async function submitAddWatch(draft: WatchDraft): Promise<ActionResult> {
         title: draft.name.trim(),
         retailer_id: retailerId,
         department_key: draft.dept || null,
+        catalog_product_id: draft.catalogProductId || null,
       })
       .select("id")
       .single();
@@ -100,6 +103,7 @@ export async function submitAddOwned(draft: OwnDraft): Promise<ActionResult> {
         title: draft.name.trim(),
         retailer_id: retailerId,
         department_key: draft.dept || null,
+        catalog_product_id: draft.catalogProductId || null,
       })
       .select("id")
       .single();
