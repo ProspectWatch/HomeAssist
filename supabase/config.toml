@@ -1,0 +1,32 @@
+project_id = "brown-family-home"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://127.0.0.1:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+[storage]
+enabled = true
+
+[edge_runtime]
+enabled = true
+
+[functions.scan-scheduler]
+verify_jwt = false

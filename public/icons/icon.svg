@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Placeholder app icon — replace with an export from the approved Claude Design once supplied. -->
+  <rect width="512" height="512" rx="96" fill="#3c6b57"/>
+  <path d="M256 128 L384 232 V384 H288 V296 H224 V384 H128 V232 Z" fill="#fafaf8"/>
+</svg>
