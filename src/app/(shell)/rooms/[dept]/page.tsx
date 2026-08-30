@@ -3,7 +3,7 @@ import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getDepartments } from "@/lib/data/departments";
 import { getWatchItems } from "@/lib/data/watch";
 import { getOwnedProducts } from "@/lib/data/owned";
-import { getRegularBuys } from "@/lib/data/pantry";
+import { getDepartmentRegularBuys } from "@/lib/data/pantry";
 import { DEPARTMENT_HERO_IMAGES } from "@/lib/assets";
 import { DepartmentView } from "./department-view";
 
@@ -17,7 +17,7 @@ export default async function DepartmentPage({ params }: { params: Promise<{ dep
   const [allWatch, ownedItems, regularBuys] = await Promise.all([
     getWatchItems(householdId),
     getOwnedProducts(householdId, deptKey),
-    getRegularBuys(householdId, deptKey),
+    getDepartmentRegularBuys(householdId, deptKey),
   ]);
   const watchItems = allWatch.filter((w) => w.department_key === deptKey);
 

@@ -301,8 +301,10 @@ export type Database = {
           preferred_size: string | null
           preferred_store: string | null
           preferred_variant: string | null
+          regular_buy: boolean
           scope_key: string
           scope_type: string
+          stock_location: string | null
           typical_quantity: string | null
           updated_at: string
         }
@@ -320,8 +322,10 @@ export type Database = {
           preferred_size?: string | null
           preferred_store?: string | null
           preferred_variant?: string | null
+          regular_buy?: boolean
           scope_key: string
           scope_type: string
+          stock_location?: string | null
           typical_quantity?: string | null
           updated_at?: string
         }
@@ -339,8 +343,10 @@ export type Database = {
           preferred_size?: string | null
           preferred_store?: string | null
           preferred_variant?: string | null
+          regular_buy?: boolean
           scope_key?: string
           scope_type?: string
+          stock_location?: string | null
           typical_quantity?: string | null
           updated_at?: string
         }
