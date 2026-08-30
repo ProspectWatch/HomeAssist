@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
 
-export async function addGroceryItem(name: string): Promise<ActionResult> {
+export async function addGroceryItem(
+  name: string,
+  options?: { catalogProductId?: string | null; category?: string | null },
+): Promise<ActionResult> {
   const trimmed = name.trim();
   if (!trimmed) return { ok: false, message: "Type something to add first." };
 
@@ -11,6 +14,8 @@ export async function addGroceryItem(name: string): Promise<ActionResult> {
     const { error } = await supabase.from("grocery_items").insert({
       household_id: householdId,
       name: trimmed,
+      catalog_product_id: options?.catalogProductId ?? null,
+      ...(options?.category ? { category: options.category } : {}),
     });
     if (error) return { ok: false, message: error.message };
     revalidatePath("/shop/list");

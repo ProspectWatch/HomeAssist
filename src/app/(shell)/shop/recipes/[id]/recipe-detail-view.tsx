@@ -2,15 +2,19 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ChefHat } from "lucide-react";
+import { ChefHat, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
 import { storeBadge } from "@/lib/assets";
 import type { RecipeDetail } from "@/lib/data/recipes";
-import { addRecipeToList } from "./actions";
+import type { CatalogProduct } from "@/lib/data/catalog";
+import { addRecipeToList, setRecipeIngredientCatalogProduct } from "./actions";
 
 export function RecipeDetailView({ recipe }: { recipe: RecipeDetail }) {
   const [pending, startTransition] = React.useTransition();
+  const [matchingIngredientId, setMatchingIngredientId] = React.useState<string | null>(null);
   const router = useRouter();
   const showToast = useToast();
 
@@ -23,6 +27,17 @@ export function RecipeDetailView({ recipe }: { recipe: RecipeDetail }) {
       }
       showToast("Ingredients added to list");
       router.push("/shop/list");
+    });
+  }
+
+  function matchIngredient(ingredientId: string, product: CatalogProduct) {
+    startTransition(async () => {
+      const res = await setRecipeIngredientCatalogProduct(ingredientId, product.id);
+      if (!res.ok) showToast(res.message);
+      else {
+        setMatchingIngredientId(null);
+        router.refresh();
+      }
     });
   }
 
@@ -53,6 +68,14 @@ export function RecipeDetailView({ recipe }: { recipe: RecipeDetail }) {
                 <div className="text-[13.5px] font-semibold">{ing.name}</div>
                 {ing.qty ? <div className="text-[11px] text-muted">{ing.qty}</div> : null}
               </div>
+              <button
+                type="button"
+                onClick={() => setMatchingIngredientId(ing.id)}
+                aria-label="Match to catalogue product"
+                className={`shrink-0 cursor-pointer rounded-full p-1.5 ${ing.catalog_product_id ? "text-oak" : "text-muted2"}`}
+              >
+                <Link2 className="h-3.5 w-3.5" />
+              </button>
               {ing.retailer ? (
                 <span
                   className="rounded-[6px] px-2 py-[3px] text-[10px] font-bold"
@@ -71,6 +94,16 @@ export function RecipeDetailView({ recipe }: { recipe: RecipeDetail }) {
           + Add All Ingredients to List
         </Button>
       </div>
+
+      <BottomSheet open={matchingIngredientId !== null} onClose={() => setMatchingIngredientId(null)}>
+        <div className="mb-3 text-sm font-semibold">Match to a catalogue product</div>
+        <ProductPicker
+          autoFocus
+          placeholder="Search products…"
+          onSelect={(product) => matchingIngredientId && matchIngredient(matchingIngredientId, product)}
+          onCustom={() => setMatchingIngredientId(null)}
+        />
+      </BottomSheet>
     </div>
   );
 }

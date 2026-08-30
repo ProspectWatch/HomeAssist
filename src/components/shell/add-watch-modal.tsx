@@ -4,10 +4,12 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CenterModal } from "@/components/ui/bottom-sheet";
 import { Button } from "@/components/ui/button";
+import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
 import { submitAddOwned, submitAddWatch, type OwnDraft, type WatchDraft } from "@/lib/actions/watch-actions";
 import type { Department } from "@/lib/data/departments";
 import type { Athlete } from "@/lib/data/athletes";
+import type { CatalogProduct } from "@/lib/data/catalog";
 
 const EMPTY_WATCH: WatchDraft = {
   name: "",
@@ -21,6 +23,7 @@ const EMPTY_WATCH: WatchDraft = {
   athleteId: "",
   size: "",
   fit: "",
+  catalogProductId: "",
 };
 
 const fieldClass =
@@ -56,6 +59,20 @@ export function AddWatchModal({
 
   function set<K extends keyof WatchDraft>(key: K, value: WatchDraft[K]) {
     setDraft((d) => ({ ...d, [key]: value }));
+  }
+
+  function selectCatalogProduct(product: CatalogProduct) {
+    setDraft((d) => ({
+      ...d,
+      name: product.display_name,
+      catalogProductId: product.id,
+      category: d.category || (product.subcategory ?? product.category),
+      retailer: d.retailer || product.preferred_store_hint || "",
+    }));
+  }
+
+  function selectCustomName(name: string) {
+    setDraft((d) => ({ ...d, name, catalogProductId: "" }));
   }
 
   function submit() {
@@ -103,8 +120,25 @@ export function AddWatchModal({
 
       <label className={labelClass}>
         Product name
-        <input className={fieldClass} value={draft.name} onChange={(e) => set("name", e.target.value)} />
+        <ProductPicker
+          className="mt-[3px]"
+          placeholder="Search products…"
+          onSelect={selectCatalogProduct}
+          onCustom={selectCustomName}
+        />
       </label>
+      {draft.name ? (
+        <div className="-mt-1 flex items-center justify-between rounded-lg bg-cream px-2.5 py-2 text-[12.5px]">
+          <span className="font-medium text-ink">{draft.name}</span>
+          <button
+            type="button"
+            onClick={() => setDraft((d) => ({ ...d, name: "", catalogProductId: "" }))}
+            className="cursor-pointer text-[11px] text-muted underline"
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
       <div className="flex gap-2">
         <label className={`flex-1 ${labelClass}`}>
           Category
