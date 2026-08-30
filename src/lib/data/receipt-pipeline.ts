@@ -290,7 +290,16 @@ export async function ingestStoredReceipt(
 }
 
 export type VerifyOutcome =
-  | { ok: true; purchasesCreated: number; observationsCreated: number; aliasesLearned: number }
+  | {
+      ok: true;
+      purchasesCreated: number;
+      observationsCreated: number;
+      aliasesLearned: number;
+      /** Set when part of the write failed. Never silently dropped: a receipt
+       *  that records purchases but no price history is a real gap, and saying
+       *  nothing is how it went unnoticed. */
+      warning?: string;
+    }
   | { ok: false; message: string };
 
 /**
@@ -357,6 +366,7 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
   let purchasesCreated = 0;
   let observationsCreated = 0;
   let aliasesLearned = 0;
+  let observationWarning: string | undefined;
 
   if (usable.length > 0) {
     const { error: purchaseError } = await supabase.from("household_purchases").insert(
@@ -400,7 +410,13 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
         })),
         { ignoreDuplicates: true },
       );
-      if (!obsError) observationsCreated = usable.length;
+      if (obsError) {
+        // The purchases above are already written and correct, so this doesn't
+        // fail the verification — but it is reported rather than swallowed.
+        observationWarning = "Purchases saved, but the prices couldn't be added to price history.";
+      } else {
+        observationsCreated = usable.length;
+      }
     }
 
     // Learn the abbreviations the household just confirmed (§8).
@@ -432,5 +448,5 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
     .update({ status: "VERIFIED", verified_at: new Date().toISOString(), verified_by: user?.id ?? null })
     .eq("id", receiptId);
 
-  return { ok: true, purchasesCreated, observationsCreated, aliasesLearned };
+  return { ok: true, purchasesCreated, observationsCreated, aliasesLearned, warning: observationWarning };
 }

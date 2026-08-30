@@ -79,7 +79,8 @@ export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
       if (!res.ok) showToast(res.message);
       else {
         showToast(
-          `Verified — ${res.purchasesCreated ?? 0} purchases, ${res.observationsCreated ?? 0} price observations recorded`,
+          res.warning ??
+            `Verified — ${res.purchasesCreated ?? 0} purchases, ${res.observationsCreated ?? 0} price observations recorded`,
         );
         router.refresh();
       }

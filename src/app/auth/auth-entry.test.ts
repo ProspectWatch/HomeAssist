@@ -29,7 +29,7 @@ describe("public auth paths", () => {
     const source = await import("node:fs").then((fs) =>
       fs.readFileSync("src/proxy.ts", "utf8"),
     );
-    const declared = source.match(/const PUBLIC_PATHS = \[(.*?)\];/s);
+    const declared = source.match(/const PUBLIC_PATHS = \[([\s\S]*?)\];/);
     expect(declared).not.toBeNull();
     for (const path of PUBLIC_PATHS) {
       expect(declared![1]).toContain(`"${path}"`);

@@ -184,6 +184,7 @@ export async function updateReceiptHeader(
 export type VerifyResult = ActionResult & {
   purchasesCreated?: number;
   observationsCreated?: number;
+  warning?: string | null;
 };
 
 /** Confirm the receipt — the only path to real purchase history. */
@@ -199,6 +200,7 @@ export async function confirmReceipt(receiptId: string): Promise<VerifyResult> {
       ok: true,
       purchasesCreated: outcome.purchasesCreated,
       observationsCreated: outcome.observationsCreated,
+      warning: outcome.warning ?? null,
     };
   });
 }
