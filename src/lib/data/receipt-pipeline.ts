@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAnthropicReceiptExtractor } from "@/lib/receipts/extractors/anthropic";
+import { createOpenAIReceiptExtractor } from "@/lib/receipts/extractors/openai";
 import { aliasKey, isProductLine, matchReceiptLine } from "@/lib/receipts/matching";
 import { findDuplicateReceipt, hashDocument, type ExistingReceipt } from "@/lib/receipts/duplicate";
 import { ReceiptExtractionError, type ReceiptExtractor } from "@/lib/receipts/types";
@@ -16,9 +16,16 @@ import type { MatchableCatalogProduct } from "@/lib/retailers/matching";
  * writes to household_purchases or retailer_price_observations.
  */
 
-/** Swappable provider (§5). Today there is one; the seam is what matters. */
+/**
+ * The active extraction provider.
+ *
+ * Swapping providers is this one line — everything downstream (matching,
+ * review, purchase history, price observations) speaks only to the
+ * ReceiptExtractor interface and never sees a provider-shaped payload.
+ * The Anthropic implementation is retained but not wired into production.
+ */
 export function getExtractor(): ReceiptExtractor {
-  return createAnthropicReceiptExtractor();
+  return createOpenAIReceiptExtractor();
 }
 
 export function isExtractionConfigured(): boolean {
@@ -138,7 +145,7 @@ export async function ingestReceipt(
       .update({
         status: "UPLOADED",
         extraction_error:
-          "Saved, but automatic reading isn't configured yet. Set ANTHROPIC_API_KEY to enable it.",
+          "Saved, but automatic reading isn't configured yet. Set CHATGPT_API_KEY to enable it.",
       })
       .eq("id", receiptId);
     return {
