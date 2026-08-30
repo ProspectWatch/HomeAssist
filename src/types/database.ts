@@ -844,20 +844,56 @@ export type Database = {
       }
       receipt_items: {
         Row: {
+          catalog_product_id: string | null
+          confirmed_by_user: boolean
+          discount_cents: number | null
+          line_total_cents: number | null
+          line_type: string
+          match_confidence: number | null
+          match_method: string | null
+          match_status: string
+          quantity: number | null
+          raw_description: string | null
+          sort_order: number
+          unit_price_cents: number | null
           id: string
-          name: string
-          price_cents: number
+          name: string | null
+          price_cents: number | null
           product_id: string | null
           receipt_id: string
         }
         Insert: {
+          catalog_product_id?: string | null
+          confirmed_by_user?: boolean
+          discount_cents?: number | null
+          line_total_cents?: number | null
+          line_type?: string
+          match_confidence?: number | null
+          match_method?: string | null
+          match_status?: string
+          quantity?: number | null
+          raw_description?: string | null
+          sort_order?: number
+          unit_price_cents?: number | null
           id?: string
-          name: string
-          price_cents: number
+          name?: string | null
+          price_cents?: number | null
           product_id?: string | null
           receipt_id: string
         }
         Update: {
+          catalog_product_id?: string | null
+          confirmed_by_user?: boolean
+          discount_cents?: number | null
+          line_total_cents?: number | null
+          line_type?: string
+          match_confidence?: number | null
+          match_method?: string | null
+          match_status?: string
+          quantity?: number | null
+          raw_description?: string | null
+          sort_order?: number
+          unit_price_cents?: number | null
           id?: string
           name?: string
           price_cents?: number
@@ -883,31 +919,76 @@ export type Database = {
       }
       receipts: {
         Row: {
+          document_hash: string | null
+          extraction_confidence: number | null
+          extraction_error: string | null
+          extractor: string | null
+          processed_at: string | null
+          purchased_time: string | null
+          raw_text: string | null
+          retailer_location_id: string | null
+          status: string
+          storage_path: string | null
+          subtotal_cents: number | null
+          tax_cents: number | null
+          transaction_ref: string | null
+          verified_at: string | null
+          verified_by: string | null
           created_at: string
           household_id: string
           id: string
           image_url: string | null
-          purchased_at: string
+          purchased_at: string | null
           retailer_id: string | null
-          total_cents: number
+          total_cents: number | null
         }
         Insert: {
+          document_hash?: string | null
+          extraction_confidence?: number | null
+          extraction_error?: string | null
+          extractor?: string | null
+          processed_at?: string | null
+          purchased_time?: string | null
+          raw_text?: string | null
+          retailer_location_id?: string | null
+          status?: string
+          storage_path?: string | null
+          subtotal_cents?: number | null
+          tax_cents?: number | null
+          transaction_ref?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           created_at?: string
           household_id: string
           id?: string
           image_url?: string | null
-          purchased_at?: string
+          purchased_at?: string | null
           retailer_id?: string | null
-          total_cents: number
+          total_cents?: number | null
         }
         Update: {
+          document_hash?: string | null
+          extraction_confidence?: number | null
+          extraction_error?: string | null
+          extractor?: string | null
+          processed_at?: string | null
+          purchased_time?: string | null
+          raw_text?: string | null
+          retailer_location_id?: string | null
+          status?: string
+          storage_path?: string | null
+          subtotal_cents?: number | null
+          tax_cents?: number | null
+          transaction_ref?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
           created_at?: string
           household_id?: string
           id?: string
           image_url?: string | null
-          purchased_at?: string
+          purchased_at?: string | null
           retailer_id?: string | null
-          total_cents?: number
+          total_cents?: number | null
         }
         Relationships: [
           {
@@ -1002,6 +1083,90 @@ export type Database = {
         }
         Relationships: []
       }
+      household_purchases: {
+        Row: {
+          catalog_product_id: string | null
+          created_at: string
+          discount_cents: number | null
+          household_id: string
+          id: string
+          line_total_cents: number
+          purchase_date: string
+          quantity: number | null
+          receipt_id: string | null
+          receipt_item_id: string | null
+          retailer_id: string | null
+          retailer_location_id: string | null
+          unit_price_cents: number | null
+        }
+        Insert: {
+          catalog_product_id?: string | null
+          created_at?: string
+          discount_cents?: number | null
+          household_id: string
+          id?: string
+          line_total_cents: number
+          purchase_date: string
+          quantity?: number | null
+          receipt_id?: string | null
+          receipt_item_id?: string | null
+          retailer_id?: string | null
+          retailer_location_id?: string | null
+          unit_price_cents?: number | null
+        }
+        Update: {
+          catalog_product_id?: string | null
+          created_at?: string
+          discount_cents?: number | null
+          household_id?: string
+          id?: string
+          line_total_cents?: number
+          purchase_date?: string
+          quantity?: number | null
+          receipt_id?: string | null
+          receipt_item_id?: string | null
+          retailer_id?: string | null
+          retailer_location_id?: string | null
+          unit_price_cents?: number | null
+        }
+        Relationships: []
+      }
+      retailer_product_aliases: {
+        Row: {
+          catalog_product_id: string
+          confidence: number
+          confirmed_by_user: boolean
+          created_at: string
+          id: string
+          last_seen_at: string
+          raw_description: string
+          retailer_id: string
+          times_seen: number
+        }
+        Insert: {
+          catalog_product_id: string
+          confidence?: number
+          confirmed_by_user?: boolean
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          raw_description: string
+          retailer_id: string
+          times_seen?: number
+        }
+        Update: {
+          catalog_product_id?: string
+          confidence?: number
+          confirmed_by_user?: boolean
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          raw_description?: string
+          retailer_id?: string
+          times_seen?: number
+        }
+        Relationships: []
+      }
       retailer_locations: {
         Row: {
           active: boolean
@@ -1064,6 +1229,8 @@ export type Database = {
       }
       retailer_price_observations: {
         Row: {
+          household_id: string | null
+          receipt_id: string | null
           availability: string | null
           catalog_product_id: string | null
           created_at: string
@@ -1091,6 +1258,8 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
+          household_id?: string | null
+          receipt_id?: string | null
           availability?: string | null
           catalog_product_id?: string | null
           created_at?: string
@@ -1118,6 +1287,8 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
+          household_id?: string | null
+          receipt_id?: string | null
           availability?: string | null
           catalog_product_id?: string | null
           created_at?: string
