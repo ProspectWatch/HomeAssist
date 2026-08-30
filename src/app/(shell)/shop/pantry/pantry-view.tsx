@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Plus } from "lucide-react";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { HeroImage } from "@/components/ui/hero-image";
@@ -12,22 +13,54 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
+import { FilterChips } from "@/components/shell/filter-chips";
+import { StatusActions } from "@/components/pantry/status-actions";
 import { PANTRY_HERO_IMAGE } from "@/lib/assets";
-import { formatCents } from "@/lib/money";
-import { cn } from "@/lib/utils";
 import type { PantryProduct } from "@/lib/data/pantry";
+import type { InventoryStatus } from "@/lib/data/inventory";
 import type { CatalogProduct } from "@/lib/data/catalog";
-import { addPantryItemToTrip, addPantryRegularBuy } from "./actions";
+import { addPantryItemToTrip, addPantryRegularBuy, setInventoryStatus } from "./actions";
 
 const ALL = "All";
+const STATUS_FILTERS = ["All", "In Stock", "Low", "Out", "Unknown", "On List"] as const;
+type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+function matchesStatus(item: PantryProduct, filter: StatusFilter): boolean {
+  switch (filter) {
+    case "All":
+      return true;
+    case "In Stock":
+      return item.inventory_status === "IN_STOCK";
+    case "Low":
+      return item.inventory_status === "LOW";
+    case "Out":
+      return item.inventory_status === "OUT";
+    case "Unknown":
+      return item.inventory_status === "UNKNOWN";
+    case "On List":
+      return item.on_list;
+  }
+}
 
 export function PantryView({ items }: { items: PantryProduct[] }) {
   const [search, setSearch] = React.useState("");
   const [category, setCategory] = React.useState(ALL);
+  const [location, setLocation] = React.useState(ALL);
+  const [status, setStatus] = React.useState<StatusFilter>("All");
   const [addOpen, setAddOpen] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
+  // Optimistic status so a tap feels instant while the write is in flight.
+  const [pendingStatus, setPendingStatus] = React.useState<Record<string, InventoryStatus>>({});
   const router = useRouter();
   const showToast = useToast();
+
+  const withStatus = React.useMemo(
+    () =>
+      items.map((item) =>
+        pendingStatus[item.id] ? { ...item, inventory_status: pendingStatus[item.id] } : item,
+      ),
+    [items, pendingStatus],
+  );
 
   const categories = React.useMemo(() => {
     const found = new Set<string>();
@@ -35,25 +68,55 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
     return [ALL, ...[...found].sort()];
   }, [items]);
 
+  const locations = React.useMemo(() => {
+    const found = new Set<string>();
+    for (const item of items) if (item.stock_location) found.add(item.stock_location);
+    return found.size > 0 ? [ALL, ...[...found].sort()] : [];
+  }, [items]);
+
   const filtered = React.useMemo(() => {
     const q = search.trim().toLowerCase();
-    return items.filter((item) => {
+    return withStatus.filter((item) => {
       if (category !== ALL && item.category !== category) return false;
+      if (location !== ALL && item.stock_location !== location) return false;
+      if (!matchesStatus(item, status)) return false;
       if (!q) return true;
-      // Match the household's own rule too, so "marilu" or "tex-mex" finds it.
       return (
         item.title.toLowerCase().includes(q) ||
         (item.preference_hint?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [items, search, category]);
+  }, [withStatus, search, category, location, status]);
 
-  function addToTrip(item: PantryProduct) {
+  const reviewed = withStatus.filter((i) => i.inventory_status !== "UNKNOWN").length;
+
+  function updateStatus(item: PantryProduct, next: InventoryStatus) {
+    if (!item.catalog_product_id) {
+      showToast("Add this from the product catalogue to track its status.");
+      return;
+    }
+    setPendingStatus((prev) => ({ ...prev, [item.id]: next }));
     startTransition(async () => {
-      const res = await addPantryItemToTrip(item.title, item.package_detail);
+      const res = await setInventoryStatus(item.catalog_product_id!, next);
+      if (!res.ok) {
+        setPendingStatus((prev) => {
+          const copy = { ...prev };
+          delete copy[item.id];
+          return copy;
+        });
+        showToast(res.message);
+      } else {
+        router.refresh();
+      }
+    });
+  }
+
+  function addToList(item: PantryProduct) {
+    startTransition(async () => {
+      const res = await addPantryItemToTrip(item.title, item.package_detail, item.catalog_product_id);
       if (!res.ok) showToast(res.message);
       else {
-        showToast(`${item.title} added to trip`);
+        showToast(res.alreadyOnList ? `${item.title} is already on the list` : `${item.title} added to list`);
         router.refresh();
       }
     });
@@ -94,25 +157,31 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
         </Button>
       </div>
 
+      <div className="mb-3 px-5">
+        <Link
+          href="/shop/pantry/check"
+          className="flex items-center justify-between rounded-(--radius-md) border border-line bg-white px-4 py-3"
+        >
+          <div>
+            <div className="text-[14px] font-semibold text-ink">Pantry Check</div>
+            <div className="text-[11.5px] text-muted">
+              {reviewed === 0
+                ? "Start a Pantry Check to update what you have."
+                : `${reviewed} of ${items.length} reviewed — pick up where you left off.`}
+            </div>
+          </div>
+          <span aria-hidden="true" className="text-[18px] text-muted2">
+            ›
+          </span>
+        </Link>
+      </div>
+
+      <FilterChips label="Status" options={[...STATUS_FILTERS]} value={status} onChange={(v) => setStatus(v as StatusFilter)} />
       {categories.length > 1 ? (
-        <div className="mb-3.5 flex gap-1.5 overflow-x-auto px-5 pb-0.5">
-          {categories.map((name) => (
-            <button
-              key={name}
-              type="button"
-              onClick={() => setCategory(name)}
-              aria-pressed={category === name}
-              className={cn(
-                "shrink-0 rounded-full border px-3 py-1.5 text-[12.5px] font-semibold whitespace-nowrap transition-colors",
-                category === name
-                  ? "border-ink bg-ink text-white"
-                  : "border-line bg-white text-muted",
-              )}
-            >
-              {name}
-            </button>
-          ))}
-        </div>
+        <FilterChips label="Category" options={categories} value={category} onChange={setCategory} />
+      ) : null}
+      {locations.length > 1 ? (
+        <FilterChips label="Location" options={locations} value={location} onChange={setLocation} />
       ) : null}
 
       <BottomSheet open={addOpen} onClose={() => setAddOpen(false)}>
@@ -125,15 +194,15 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
         />
       </BottomSheet>
 
-      <div className="mx-5 mb-3.5">
+      <div className="mx-5 mt-1 mb-3.5">
         <HeroImage
           src={PANTRY_HERO_IMAGE}
           alt="Pantry shelves"
-          height={210}
+          height={180}
           radiusClassName="rounded-(--radius-xl)"
           overlay="full"
           caption="Regular Buys"
-          captionSubtitle="The staples we keep on hand."
+          captionSubtitle={`${items.length} staples we keep on hand.`}
         />
       </div>
 
@@ -144,47 +213,38 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
             description={
               items.length === 0
                 ? "Tap + above to add a staple you always keep on hand."
-                : "Try a different search or category."
+                : "Try a different search, status or category."
             }
           />
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-2.5 px-5">
+        <div className="flex flex-col gap-2 px-5">
           {filtered.map((item) => (
             <div
               key={item.id}
-              className="flex flex-col gap-1.5 rounded-(--radius-md) border border-line bg-white p-2.5"
+              className="flex flex-col gap-2 rounded-(--radius-md) border border-line bg-white p-3"
             >
-              <div className="overflow-hidden rounded-(--radius-sm)">
-                <ProductImage src={item.image_url} alt={item.title} height={120} category={item.category} />
+              <div className="flex items-center gap-3">
+                <div className="w-14 shrink-0 overflow-hidden rounded-(--radius-sm)">
+                  <ProductImage src={item.image_url} alt={item.title} height={56} category={item.category} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[14px] leading-tight font-semibold">{item.title}</div>
+                  {item.preference_hint ? (
+                    <div className="truncate text-[11.5px] leading-tight text-oak">{item.preference_hint}</div>
+                  ) : null}
+                  {item.stock_location ? (
+                    <div className="text-[11px] text-muted2">{item.stock_location}</div>
+                  ) : null}
+                </div>
               </div>
-              <div className="text-[13.5px] leading-tight font-semibold">{item.title}</div>
-              {item.preference_hint ? (
-                <div className="text-[11px] leading-tight text-oak">{item.preference_hint}</div>
-              ) : null}
-              {item.package_detail ? <div className="text-[11px] text-muted">{item.package_detail}</div> : null}
-              {item.stock_location ? (
-                <div className="text-[11px] text-muted2">Kept in {item.stock_location}</div>
-              ) : null}
-              {item.target_price_cents != null ? (
-                <div className="text-[11px] font-semibold text-oak">
-                  Target: {formatCents(item.target_price_cents)}
-                </div>
-              ) : null}
-              {item.stock_status ? (
-                <div className="text-[11px] text-muted">
-                  {item.stock_status === "low" ? "Running low" : "In stock"}
-                </div>
-              ) : null}
-              <Button
-                size="sm"
-                variant="outline"
-                className="mt-0.5 bg-cream"
+              <StatusActions
+                status={item.inventory_status}
+                onList={item.on_list}
                 disabled={pending}
-                onClick={() => addToTrip(item)}
-              >
-                + Trip
-              </Button>
+                onSetStatus={(next) => updateStatus(item, next)}
+                onAddToList={() => addToList(item)}
+              />
             </div>
           ))}
         </div>
