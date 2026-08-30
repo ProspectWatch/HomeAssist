@@ -1,12 +1,13 @@
 import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
 export type ActionResult = { ok: true } | { ok: false; message: string };
 
 export const NOT_CONNECTED: ActionResult = {
   ok: false,
-  message: "No household is connected yet — sign-in isn't set up in this preview.",
+  message: "You're not signed in to a household — sign in and join or create one first.",
 };
 
 /**
@@ -16,7 +17,7 @@ export const NOT_CONNECTED: ActionResult = {
  * a fabricated success or an unhandled exception.
  */
 export async function runHouseholdAction(
-  fn: (supabase: SupabaseClient, householdId: string) => Promise<ActionResult>,
+  fn: (supabase: SupabaseClient<Database>, householdId: string) => Promise<ActionResult>,
 ): Promise<ActionResult> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return NOT_CONNECTED;

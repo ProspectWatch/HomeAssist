@@ -5,10 +5,8 @@ import { createClient } from "@/lib/supabase/server";
  * there is no session or the user isn't linked to a household yet — every
  * caller must treat that as a real, expected state (not an error): render
  * the honest "not connected" / empty state rather than fabricating data.
- *
- * There is no auth/onboarding UI yet (Phase 1 scope), so today this always
- * returns null in a browser session — that's expected until sign-in and a
- * live Supabase project exist, not a bug in the screens that call this.
+ * Middleware redirects a session with no household to /onboarding before
+ * most screens are ever reached, but data helpers still handle null.
  */
 export async function getCurrentHouseholdId(): Promise<string | null> {
   try {
