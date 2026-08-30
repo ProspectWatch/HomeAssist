@@ -1,9 +1,10 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getSiteUrl } from "@/lib/site-url";
 import type { ActionResult } from "@/lib/actions/helpers";
 
-export async function sendMagicLink(email: string, origin: string): Promise<ActionResult> {
+export async function sendMagicLink(email: string): Promise<ActionResult> {
   const trimmed = email.trim();
   if (!trimmed) return { ok: false, message: "Enter your email." };
 
@@ -11,7 +12,7 @@ export async function sendMagicLink(email: string, origin: string): Promise<Acti
   const { error } = await supabase.auth.signInWithOtp({
     email: trimmed,
     options: {
-      emailRedirectTo: `${origin}/auth/callback`,
+      emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       shouldCreateUser: true,
     },
   });

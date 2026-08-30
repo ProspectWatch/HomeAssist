@@ -14,8 +14,7 @@ export function LoginView() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const origin = window.location.origin;
-      const res = await sendMagicLink(email, origin);
+      const res = await sendMagicLink(email);
       setStatus(res.ok ? { kind: "sent" } : { kind: "error", message: res.message });
     });
   }
