@@ -40,22 +40,24 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<Acti
     redirect("/home");
   }
 
-  const { data: household, error: householdError } = await supabase
-    .from("households")
-    .insert({ name })
-    .select("id")
-    .single();
-  if (householdError || !household) {
-    return { ok: false, message: householdError?.message ?? "Couldn't create the household." };
+  // The households SELECT policy only allows members to read a household,
+  // so `.insert().select()` fails RLS here: the creator isn't a member yet
+  // (that's the very next insert). Generating the id client-side and
+  // inserting without a return avoids ever needing to read the row back
+  // before membership exists.
+  const householdId = crypto.randomUUID();
+  const { error: householdError } = await supabase.from("households").insert({ id: householdId, name });
+  if (householdError) {
+    return { ok: false, message: householdError.message };
   }
 
   const { error: memberError } = await supabase
     .from("household_members")
-    .insert({ household_id: household.id, user_id: user.id, role: "owner" });
+    .insert({ household_id: householdId, user_id: user.id, role: "owner" });
   if (memberError) return { ok: false, message: memberError.message };
 
   const { error: settingsError } = await supabase.from("household_settings").upsert({
-    household_id: household.id,
+    household_id: householdId,
     postal_code: input.postalCode.trim() || null,
     city: input.city.trim() || null,
     province: input.province.trim() || null,
@@ -68,7 +70,7 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<Acti
   // Best-effort: gives a brand-new household a starting point for product
   // preferences (see seed_starter_household_preferences() in
   // 0004_product_catalog.sql). Never blocks onboarding if it fails.
-  await supabase.rpc("seed_starter_household_preferences", { target_household_id: household.id });
+  await supabase.rpc("seed_starter_household_preferences", { target_household_id: householdId });
 
   redirect("/home");
 }
