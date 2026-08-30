@@ -39,7 +39,6 @@ Persimmon
 Rhubarb
 Fruit Tray | fruit platter
 Fruit Cups | fruit salad cups
-Blackberry Pint
 Star Fruit | carambola
 Guava
 """
@@ -102,8 +101,6 @@ White Potatoes
 Butternut Squash Cubes
 Stir Fry Vegetables | vegetable stir fry mix
 Vegetable Tray | veggie platter
-Corn on the Cob Pack
-Grape Tomatoes Pint
 Turnip Greens
 """
 
@@ -332,7 +329,6 @@ Whole Lactose-Free Milk
 Skim Lactose-Free Milk
 Buttermilk
 Goat Milk
-Milk Jug
 """
 
 CATALOGUE[("Dairy & Eggs", "Plant-Based Milk")] = """

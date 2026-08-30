@@ -261,13 +261,6 @@
    ]
   },
   {
-   "id": "blackberry-pint",
-   "display_name": "Blackberry Pint",
-   "category": "Produce",
-   "subcategory": "Fruit",
-   "search_aliases": []
-  },
-  {
    "id": "star-fruit",
    "display_name": "Star Fruit",
    "category": "Produce",
@@ -730,20 +723,6 @@
    "search_aliases": [
     "veggie platter"
    ]
-  },
-  {
-   "id": "corn-on-the-cob-pack",
-   "display_name": "Corn on the Cob Pack",
-   "category": "Produce",
-   "subcategory": "Vegetables",
-   "search_aliases": []
-  },
-  {
-   "id": "grape-tomatoes-pint",
-   "display_name": "Grape Tomatoes Pint",
-   "category": "Produce",
-   "subcategory": "Vegetables",
-   "search_aliases": []
   },
   {
    "id": "turnip-greens",
@@ -2266,13 +2245,6 @@
   {
    "id": "goat-milk",
    "display_name": "Goat Milk",
-   "category": "Dairy & Eggs",
-   "subcategory": "Milk",
-   "search_aliases": []
-  },
-  {
-   "id": "milk-jug",
-   "display_name": "Milk Jug",
    "category": "Dairy & Eggs",
    "subcategory": "Milk",
    "search_aliases": []

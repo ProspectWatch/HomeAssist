@@ -41,7 +41,9 @@ describe("catalogue taxonomy", () => {
     expect(isCatalogCategory("Snacks")).toBe(true);
     expect(isCatalogCategory("Confectionery")).toBe(true);
     expect(subcategoriesFor("Snacks")).toContain("Chips");
-    expect(subcategoriesFor("Confectionery")).toContain("Fruit Snacks");
+    // Fruit snacks are filed under Snacks, not Confectionery.
+    expect(subcategoriesFor("Snacks")).toContain("Fruit Snacks");
+    expect(subcategoriesFor("Confectionery")).toContain("Gummies");
     expect(subcategoriesFor("Frozen")).toContain("Frozen Dessert");
     expect(subcategoriesFor("Drinks")).toContain("Soft Drinks");
   });

@@ -124,8 +124,7 @@ insert into product_subcategories (category, name, sort_order) values
   ('Household', 'Personal Care', 92),
   ('Household', 'Pet', 93),
   ('Pantry', 'Bread', 94),
-  ('Pantry', 'Snacks', 95),
-  ('Confectionery', 'Fruit Snacks', 96)
+  ('Pantry', 'Snacks', 95)
 on conflict (category, name) do nothing;
 
 -- The catalogue. Grouped by aisle so category and aisle appear once per group;
@@ -153,7 +152,7 @@ from (values
   ('Dairy & Eggs', 'Butter & Cream', 'Salted Butter|Unsalted Butter|Margarine|Whipping Cream|Half and Half|Coffee Cream|Table Cream|Whipped Cream|Creme Fraiche|Butter Sticks|Spreadable Butter|Ghee|Non-Dairy Whipped Topping|Sour Cream Light'),
   ('Dairy & Eggs', 'Cheese', 'Mozzarella Cheese|Shredded Mozzarella|Shredded Cheddar|Marble Cheese|Swiss Cheese|Havarti Cheese|Gouda Cheese|Brie Cheese|Camembert Cheese|Feta Cheese|Goat Cheese|Blue Cheese|Provolone Cheese|Monterey Jack Cheese|Cheese Slices|Cheese Strings|Mini Cheese Rounds|Ricotta Cheese|Mascarpone Cheese|Halloumi Cheese|Paneer|Grated Parmesan|Nacho Cheese Sauce|Cheese Curds|Old Cheddar Cheese|Mild Cheddar Cheese|Cream Cheese Spread|Boursin Style Cheese|Shredded Italian Blend|Cottage Cheese Small Curd'),
   ('Dairy & Eggs', 'Eggs', 'Large Eggs|Extra Large Eggs|Free Range Eggs|Organic Eggs|Brown Eggs|White Eggs|Egg Whites|Liquid Eggs|Omega-3 Eggs|Hard Boiled Eggs'),
-  ('Dairy & Eggs', 'Milk', 'Whole Milk|2% Milk|1% Milk|Skim Milk|Chocolate Milk|Strawberry Milk|1% Lactose-Free Milk|Whole Lactose-Free Milk|Skim Lactose-Free Milk|Buttermilk|Goat Milk|Milk Jug'),
+  ('Dairy & Eggs', 'Milk', 'Whole Milk|2% Milk|1% Milk|Skim Milk|Chocolate Milk|Strawberry Milk|1% Lactose-Free Milk|Whole Lactose-Free Milk|Skim Lactose-Free Milk|Buttermilk|Goat Milk'),
   ('Dairy & Eggs', 'Plant-Based Milk', 'Almond Milk|Original Almond Milk|Unsweetened Almond Milk|Vanilla Almond Milk|Chocolate Almond Milk|Oat Milk|Vanilla Oat Milk|Barista Oat Milk|Soy Milk|Vanilla Soy Milk|Coconut Milk Beverage|Cashew Milk|Rice Milk|Pea Milk|Unsweetened Oat Milk|Unsweetened Soy Milk'),
   ('Dairy & Eggs', 'Yogurt', 'Plain Yogurt|Vanilla Yogurt|Strawberry Yogurt|Fruit Bottom Yogurt|Plain Greek Yogurt|Vanilla Greek Yogurt|Skyr Yogurt|Kefir|Drinkable Yogurt|Kids Yogurt Tubes|Yogurt Cups|Balkan Yogurt|Coconut Yogurt|Almond Yogurt|High Protein Yogurt'),
   ('Deli & Prepared', 'Deli', 'Sliced Ham|Sliced Turkey|Sliced Roast Beef|Sliced Chicken|Salami|Pepperoni|Prosciutto|Capicola|Mortadella|Bologna|Pastrami|Corned Beef|Deli Cheese Slices|Charcuterie Tray|Smoked Turkey|Black Forest Ham|Montreal Smoked Meat'),
@@ -217,9 +216,9 @@ from (values
   ('Pet', 'Dog', 'Dry Dog Food|Wet Dog Food|Puppy Food|Grain-Free Dog Food|Dog Biscuits|Dog Chews|Rawhide Chews|Dental Chews|Dog Food Toppers|Senior Dog Food|Large Breed Dog Food'),
   ('Pet', 'Pet Supplies', 'Pet Waste Bags|Pet Shampoo|Pet Wipes|Flea Treatment|Pet Bowls|Pet Toys|Pet Bed|Leash|Collar|Pet Brush|Litter Box|Pet Stain Remover'),
   ('Produce', 'Fresh Herbs', 'Fresh Basil|Fresh Cilantro|Fresh Parsley|Italian Parsley|Fresh Mint|Fresh Rosemary|Fresh Thyme|Fresh Oregano|Fresh Sage|Fresh Dill|Fresh Chives|Fresh Tarragon|Lemongrass|Fresh Basil Plant'),
-  ('Produce', 'Fruit', 'Gala Apples|Granny Smith Apples|Honeycrisp Apples|McIntosh Apples|Ambrosia Apples|Red Delicious Apples|Bartlett Pears|Bosc Pears|Anjou Pears|Navel Oranges|Mandarin Oranges|Grapefruit|Blackberries|Cranberries|Cherries|Peaches|Nectarines|Plums|Apricots|Mangoes|Papaya|Honeydew Melon|Pomegranate|Passion Fruit|Figs|Medjool Dates|Coconut|Lychee|Persimmon|Rhubarb|Fruit Tray|Fruit Cups|Blackberry Pint|Star Fruit|Guava'),
+  ('Produce', 'Fruit', 'Gala Apples|Granny Smith Apples|Honeycrisp Apples|McIntosh Apples|Ambrosia Apples|Red Delicious Apples|Bartlett Pears|Bosc Pears|Anjou Pears|Navel Oranges|Mandarin Oranges|Grapefruit|Blackberries|Cranberries|Cherries|Peaches|Nectarines|Plums|Apricots|Mangoes|Papaya|Honeydew Melon|Pomegranate|Passion Fruit|Figs|Medjool Dates|Coconut|Lychee|Persimmon|Rhubarb|Fruit Tray|Fruit Cups|Star Fruit|Guava'),
   ('Produce', 'Leafy Greens', 'Red Leaf Lettuce|Butter Lettuce|Spring Mix|Baby Spinach|Kale|Baby Kale|Swiss Chard|Collard Greens|Caesar Salad Kit|Garden Salad Kit|Coleslaw|Watercress|Endive|Radicchio|Microgreens|Bean Sprouts|Spinach Salad Mix|Chopped Romaine|Salad Blend'),
-  ('Produce', 'Vegetables', 'Brussels Sprouts|Green Cabbage|Red Cabbage|Napa Cabbage|Bok Choy|Leeks|Shallots|Parsnips|Turnip|Rutabaga|Beets|Radishes|Butternut Squash|Acorn Squash|Spaghetti Squash|Eggplant|Okra|Snap Peas|Snow Peas|Edamame|Artichoke|Fennel|Fresh Ginger|Jalapeno Peppers|Habanero Peppers|Poblano Peppers|Serrano Peppers|Mini Sweet Peppers|Orange Bell Pepper|Roma Tomatoes|Beefsteak Tomatoes|Tomatoes on the Vine|Heirloom Tomatoes|Baby Carrots|Carrot Sticks|Coleslaw Mix|Broccoli Slaw|Cauliflower Rice|Broccoli Florets|Cauliflower Florets|Portobello Mushrooms|Cremini Mushrooms|Shiitake Mushrooms|White Mushrooms|Sliced Mushrooms|Celery Hearts|Field Cucumber|Pickling Cucumbers|Yellow Squash|Sweet Onion|Green Peas|Peeled Garlic|Red Potatoes|White Potatoes|Butternut Squash Cubes|Stir Fry Vegetables|Vegetable Tray|Corn on the Cob Pack|Grape Tomatoes Pint|Turnip Greens'),
+  ('Produce', 'Vegetables', 'Brussels Sprouts|Green Cabbage|Red Cabbage|Napa Cabbage|Bok Choy|Leeks|Shallots|Parsnips|Turnip|Rutabaga|Beets|Radishes|Butternut Squash|Acorn Squash|Spaghetti Squash|Eggplant|Okra|Snap Peas|Snow Peas|Edamame|Artichoke|Fennel|Fresh Ginger|Jalapeno Peppers|Habanero Peppers|Poblano Peppers|Serrano Peppers|Mini Sweet Peppers|Orange Bell Pepper|Roma Tomatoes|Beefsteak Tomatoes|Tomatoes on the Vine|Heirloom Tomatoes|Baby Carrots|Carrot Sticks|Coleslaw Mix|Broccoli Slaw|Cauliflower Rice|Broccoli Florets|Cauliflower Florets|Portobello Mushrooms|Cremini Mushrooms|Shiitake Mushrooms|White Mushrooms|Sliced Mushrooms|Celery Hearts|Field Cucumber|Pickling Cucumbers|Yellow Squash|Sweet Onion|Green Peas|Peeled Garlic|Red Potatoes|White Potatoes|Butternut Squash Cubes|Stir Fry Vegetables|Vegetable Tray|Turnip Greens'),
   ('Snacks', 'Bars & Granola', 'Granola Bars|Chewy Granola Bars|Crunchy Granola Bars|Protein Bars|Energy Bars|Fruit and Nut Bars|Cereal Bars|Crisp Rice Squares|Oat Bars|Nut Butter Bars|Kids Granola Bars'),
   ('Snacks', 'Chips', 'Potato Chips|Ripple Chips|Kettle Chips|All Dressed Chips|Ketchup Chips|Salt and Vinegar Chips|BBQ Chips|Sour Cream and Onion Chips|Plain Potato Chips|Dill Pickle Chips|Tortilla Chips|Nacho Cheese Tortilla Chips|Corn Chips|Restaurant Style Tortilla Chips|Blue Corn Chips|Veggie Chips|Pita Chips|Plantain Chips|Sweet Potato Chips|Multigrain Chips|Cheese Flavoured Chips|Lightly Salted Chips'),
   ('Snacks', 'Cookies', 'Chocolate Chip Cookies|Oatmeal Cookies|Sandwich Cookies|Shortbread Cookies|Digestive Biscuits|Wafer Cookies|Fig Bars|Animal Crackers|Ginger Snaps|Biscotti|Maple Cookies|Peanut Butter Cookies|Chocolate Covered Cookies|Tea Biscuits'),
@@ -537,3 +536,25 @@ from (values
   ('recycle-bags', array['blue box bags'])
 ) as v(id, a)
 where p.id = v.id;
+
+-- Four rows that describe a PACKAGE FORMAT rather than a product concept, and
+-- duplicate a concept the catalogue already has. Removed only from this seed's
+-- own rows and only while nothing references them, so a household that has
+-- since used one keeps it. (They are also gone from data.py, so a fresh run
+-- never creates them; this clears the ones an earlier run already inserted.)
+delete from catalog_products c
+where c.source = 'master_catalogue_v1'
+  and c.id in ('milk-jug', 'blackberry-pint', 'grape-tomatoes-pint', 'corn-on-the-cob-pack')
+  and not exists (select 1 from household_purchases x where x.catalog_product_id = c.id)
+  and not exists (select 1 from household_product_preferences x where x.scope_key = c.id)
+  and not exists (select 1 from receipt_items x where x.catalog_product_id = c.id)
+  and not exists (select 1 from retailer_product_aliases x where x.catalog_product_id = c.id)
+  and not exists (select 1 from grocery_items x where x.catalog_product_id = c.id)
+  and not exists (select 1 from household_inventory_state x where x.catalog_product_id = c.id)
+  and not exists (select 1 from retailer_price_observations x where x.catalog_product_id = c.id);
+
+-- Fruit snacks are filed under Snacks; this Confectionery aisle holds nothing.
+delete from product_subcategories ps
+where ps.category = 'Confectionery' and ps.name = 'Fruit Snacks'
+  and not exists (select 1 from catalog_products c
+                  where c.category = ps.category and c.subcategory = ps.name);
