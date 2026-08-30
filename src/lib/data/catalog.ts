@@ -20,22 +20,33 @@ export type CatalogProduct = {
 const CATALOG_FIELDS =
   "id, display_name, brand, category, subcategory, search_aliases, default_unit, image_url, image_ready, preferred_store_hint";
 
+/** PostgREST caps a single response (Supabase's default is 1,000 rows), so the
+ *  index is paged. Silently returning the first page would drop products out
+ *  of typeahead entirely — invisibly, because a short list looks normal. */
+const CATALOG_PAGE_SIZE = 1000;
+
 /**
- * The whole active catalogue (~170 rows) for client-side instant search —
- * step 11's "client-side cached catalogue for this catalogue size" call.
- * Exposed to the browser via /api/catalog; also usable directly from
- * server components (category browsing, recipe ingredient mapping).
+ * The whole active catalogue for client-side instant search — step 11's
+ * "client-side cached catalogue for this catalogue size" call. Exposed to the
+ * browser via /api/catalog; also usable directly from server components
+ * (category browsing, recipe ingredient mapping).
  */
 export async function getCatalogSearchIndex(): Promise<CatalogProduct[]> {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("catalog_products")
-      .select(CATALOG_FIELDS)
-      .eq("active", true)
-      .order("display_name", { ascending: true });
-    if (error || !data) return [];
-    return data as unknown as CatalogProduct[];
+    const all: CatalogProduct[] = [];
+    for (let page = 0; ; page++) {
+      const { data, error } = await supabase
+        .from("catalog_products")
+        .select(CATALOG_FIELDS)
+        .eq("active", true)
+        .order("display_name", { ascending: true })
+        .range(page * CATALOG_PAGE_SIZE, (page + 1) * CATALOG_PAGE_SIZE - 1);
+      if (error) return page === 0 ? [] : all;
+      const rows = (data ?? []) as unknown as CatalogProduct[];
+      all.push(...rows);
+      if (rows.length < CATALOG_PAGE_SIZE) return all;
+    }
   } catch {
     return [];
   }

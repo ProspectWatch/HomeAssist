@@ -106,7 +106,7 @@ export const CATALOG_CATEGORIES: CatalogCategory[] = [
     groceryCategory: "Pantry",
     sortOrder: 10,
     kitchenOrder: 7,
-    subcategories: ["Candy", "Chocolate", "Gum & Mints", "Gummies", "Licorice", "Fruit Snacks"],
+    subcategories: ["Candy", "Chocolate", "Gum & Mints", "Gummies", "Licorice"],
   },
   {
     name: "Health & Beauty",

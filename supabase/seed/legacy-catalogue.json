@@ -1,0 +1,1473 @@
+{
+ "note": "Catalogue rows that predate the master seed. Fixture only, so the search QA runs against the whole catalogue.",
+ "products": [
+  {
+   "id": "2-lactose-free-milk",
+   "display_name": "2% Lactose-Free Milk",
+   "search_aliases": [
+    "2 percent milk",
+    "lactose free milk"
+   ]
+  },
+  {
+   "id": "aaa-striploin-steak",
+   "display_name": "AAA Striploin Steak",
+   "search_aliases": [
+    "new york strip",
+    "ny strip",
+    "steak",
+    "striploin"
+   ]
+  },
+  {
+   "id": "air-filters",
+   "display_name": "Air Filters",
+   "search_aliases": [
+    "furnace filter",
+    "hvac filter"
+   ]
+  },
+  {
+   "id": "all-purpose-cleaner",
+   "display_name": "All-Purpose Cleaner",
+   "search_aliases": [
+    "cleaner",
+    "multi surface cleaner"
+   ]
+  },
+  {
+   "id": "aluminum-foil",
+   "display_name": "Aluminum Foil",
+   "search_aliases": [
+    "foil",
+    "tin foil"
+   ]
+  },
+  {
+   "id": "apples",
+   "display_name": "Apples",
+   "search_aliases": [
+    "apple"
+   ]
+  },
+  {
+   "id": "arugula",
+   "display_name": "Arugula",
+   "search_aliases": [
+    "arugula",
+    "rocket"
+   ]
+  },
+  {
+   "id": "asparagus",
+   "display_name": "Asparagus",
+   "search_aliases": [
+    "asparagus bunch"
+   ]
+  },
+  {
+   "id": "atlantic-salmon-fillet",
+   "display_name": "Atlantic Salmon Fillet",
+   "search_aliases": [
+    "atlantic salmon",
+    "salmon"
+   ]
+  },
+  {
+   "id": "avocados",
+   "display_name": "Avocados",
+   "search_aliases": [
+    "avocado"
+   ]
+  },
+  {
+   "id": "baby-potatoes",
+   "display_name": "Baby Potatoes",
+   "search_aliases": [
+    "baby potato",
+    "creamer potatoes",
+    "mini potatoes"
+   ]
+  },
+  {
+   "id": "bananas",
+   "display_name": "Bananas",
+   "search_aliases": [
+    "banana"
+   ]
+  },
+  {
+   "id": "bananas-bunch",
+   "display_name": "Bananas Bunch",
+   "search_aliases": [
+    "banana",
+    "bunch"
+   ]
+  },
+  {
+   "id": "barbecue-sauce",
+   "display_name": "Barbecue Sauce",
+   "search_aliases": [
+    "barbeque sauce",
+    "bbq sauce"
+   ]
+  },
+  {
+   "id": "bathroom-cleaner",
+   "display_name": "Bathroom Cleaner",
+   "search_aliases": [
+    "shower cleaner",
+    "tub cleaner"
+   ]
+  },
+  {
+   "id": "batteries-aa",
+   "display_name": "Batteries AA",
+   "search_aliases": [
+    "aa batteries"
+   ]
+  },
+  {
+   "id": "batteries-aaa",
+   "display_name": "Batteries AAA",
+   "search_aliases": [
+    "aaa batteries"
+   ]
+  },
+  {
+   "id": "beef-roast",
+   "display_name": "Beef Roast",
+   "search_aliases": [
+    "pot roast",
+    "roast beef"
+   ]
+  },
+  {
+   "id": "beef-tenderloin",
+   "display_name": "Beef Tenderloin",
+   "search_aliases": [
+    "filet mignon",
+    "steak",
+    "tenderloin"
+   ]
+  },
+  {
+   "id": "bell-peppers",
+   "display_name": "Bell Peppers",
+   "search_aliases": [
+    "bell pepper",
+    "mixed peppers",
+    "peppers",
+    "sweet pepper",
+    "sweet peppers"
+   ]
+  },
+  {
+   "id": "bi-colour-corn-on-the-cob",
+   "display_name": "Bi-Colour Corn on the Cob",
+   "search_aliases": [
+    "corn",
+    "corn on cob"
+   ]
+  },
+  {
+   "id": "bisquick",
+   "display_name": "Bisquick",
+   "search_aliases": [
+    "biscuit mix",
+    "pancake mix"
+   ]
+  },
+  {
+   "id": "blueberries",
+   "display_name": "Blueberries",
+   "search_aliases": [
+    "blueberry"
+   ]
+  },
+  {
+   "id": "body-wash",
+   "display_name": "Body Wash",
+   "search_aliases": [
+    "body soap",
+    "shower gel"
+   ]
+  },
+  {
+   "id": "boneless-skinless-chicken-breast",
+   "display_name": "Boneless Skinless Chicken Breast",
+   "search_aliases": [
+    "boneless chicken",
+    "boneless chicken breast",
+    "chicken breast",
+    "chicken breasts"
+   ]
+  },
+  {
+   "id": "bottled-water",
+   "display_name": "Bottled Water",
+   "search_aliases": [
+    "spring water",
+    "water case"
+   ]
+  },
+  {
+   "id": "broccoli",
+   "display_name": "Broccoli",
+   "search_aliases": [
+    "broccoli crowns"
+   ]
+  },
+  {
+   "id": "burgers",
+   "display_name": "Burgers",
+   "search_aliases": [
+    "beef burgers",
+    "hamburger patties"
+   ]
+  },
+  {
+   "id": "butter",
+   "display_name": "Butter",
+   "search_aliases": [
+    "salted butter",
+    "unsalted butter"
+   ]
+  },
+  {
+   "id": "cantaloupe",
+   "display_name": "Cantaloupe",
+   "search_aliases": [
+    "cantaloupe",
+    "melon"
+   ]
+  },
+  {
+   "id": "carrots",
+   "display_name": "Carrots",
+   "search_aliases": [
+    "carrot"
+   ]
+  },
+  {
+   "id": "cauliflower",
+   "display_name": "Cauliflower",
+   "search_aliases": [
+    "cauliflower head"
+   ]
+  },
+  {
+   "id": "celery",
+   "display_name": "Celery",
+   "search_aliases": [
+    "celery stalk"
+   ]
+  },
+  {
+   "id": "cheddar-cheese-block",
+   "display_name": "Cheddar Cheese Block",
+   "search_aliases": [
+    "block cheese",
+    "cheddar"
+   ]
+  },
+  {
+   "id": "cherry-tomatoes",
+   "display_name": "Cherry Tomatoes",
+   "search_aliases": [
+    "cherry tomato"
+   ]
+  },
+  {
+   "id": "chicken-broth",
+   "display_name": "Chicken Broth",
+   "search_aliases": [
+    "broth",
+    "chicken stock"
+   ]
+  },
+  {
+   "id": "chicken-drumsticks",
+   "display_name": "Chicken Drumsticks",
+   "search_aliases": [
+    "chicken legs",
+    "drumsticks"
+   ]
+  },
+  {
+   "id": "chicken-thighs",
+   "display_name": "Chicken Thighs",
+   "search_aliases": [
+    "boneless thighs",
+    "chicken thigh"
+   ]
+  },
+  {
+   "id": "chili-powder",
+   "display_name": "Chili Powder",
+   "search_aliases": [
+    "chili",
+    "chilli powder"
+   ]
+  },
+  {
+   "id": "cinnamon-toast-crunch",
+   "display_name": "Cinnamon Toast Crunch",
+   "search_aliases": [
+    "cereal",
+    "cinnamon toast crunch"
+   ]
+  },
+  {
+   "id": "coca-cola-fridge-pack",
+   "display_name": "Coca-Cola Fridge Pack",
+   "search_aliases": [
+    "coca cola",
+    "coca cola fridge",
+    "coke fridge pack"
+   ]
+  },
+  {
+   "id": "cod-fillet",
+   "display_name": "Cod Fillet",
+   "search_aliases": [
+    "cod",
+    "white fish"
+   ]
+  },
+  {
+   "id": "coffee",
+   "display_name": "Coffee",
+   "search_aliases": [
+    "coffee beans",
+    "ground coffee"
+   ]
+  },
+  {
+   "id": "conditioner",
+   "display_name": "Conditioner",
+   "search_aliases": [
+    "hair conditioner"
+   ]
+  },
+  {
+   "id": "conestoga-brown-free-range-eggs",
+   "display_name": "Conestoga Brown Free-Range Eggs",
+   "search_aliases": [
+    "brown eggs",
+    "conestoga eggs",
+    "free range eggs"
+   ]
+  },
+  {
+   "id": "corn-on-the-cob",
+   "display_name": "Corn on the Cob",
+   "search_aliases": [
+    "cob",
+    "corn",
+    "corn on cob"
+   ]
+  },
+  {
+   "id": "cottage-cheese",
+   "display_name": "Cottage Cheese",
+   "search_aliases": [
+    "cottage cheese"
+   ]
+  },
+  {
+   "id": "cream-cheese",
+   "display_name": "Cream Cheese",
+   "search_aliases": [
+    "cream cheese"
+   ]
+  },
+  {
+   "id": "decaf-tea",
+   "display_name": "Decaf Tea",
+   "search_aliases": [
+    "decaffeinated tea",
+    "tea"
+   ]
+  },
+  {
+   "id": "deli-meat",
+   "display_name": "Deli Meat",
+   "search_aliases": [
+    "cold cuts",
+    "lunch meat",
+    "sliced meat"
+   ]
+  },
+  {
+   "id": "deodorant",
+   "display_name": "Deodorant",
+   "search_aliases": [
+    "antiperspirant",
+    "deodorant"
+   ]
+  },
+  {
+   "id": "dijon-mustard",
+   "display_name": "Dijon Mustard",
+   "search_aliases": [
+    "dijon",
+    "mustard"
+   ]
+  },
+  {
+   "id": "dish-soap",
+   "display_name": "Dish Soap",
+   "search_aliases": [
+    "dawn",
+    "dish liquid"
+   ]
+  },
+  {
+   "id": "dishwasher-pods",
+   "display_name": "Dishwasher Pods",
+   "search_aliases": [
+    "dish pods",
+    "dishwasher tabs"
+   ]
+  },
+  {
+   "id": "dishwasher-soap",
+   "display_name": "Dishwasher Soap",
+   "search_aliases": [
+    "dishwasher detergent"
+   ]
+  },
+  {
+   "id": "disinfecting-wipes",
+   "display_name": "Disinfecting Wipes",
+   "search_aliases": [
+    "clorox wipes",
+    "lysol wipes"
+   ]
+  },
+  {
+   "id": "dog-food",
+   "display_name": "Dog Food",
+   "search_aliases": [
+    "dog food",
+    "dog kibble"
+   ]
+  },
+  {
+   "id": "dog-treats",
+   "display_name": "Dog Treats",
+   "search_aliases": [
+    "dog treats"
+   ]
+  },
+  {
+   "id": "earth-s-own-original-almond-milk",
+   "display_name": "Earth's Own Original Almond Milk",
+   "search_aliases": [
+    "almond milk",
+    "earths own"
+   ]
+  },
+  {
+   "id": "english-cucumber",
+   "display_name": "English Cucumber",
+   "search_aliases": [
+    "cucumber",
+    "english cucumber"
+   ]
+  },
+  {
+   "id": "extra-lean-ground-beef",
+   "display_name": "Extra Lean Ground Beef",
+   "search_aliases": [
+    "extra lean beef",
+    "extra lean hamburger",
+    "ground beef"
+   ]
+  },
+  {
+   "id": "fabric-softener",
+   "display_name": "Fabric Softener",
+   "search_aliases": [
+    "downy",
+    "softener"
+   ]
+  },
+  {
+   "id": "fajita-seasoning",
+   "display_name": "Fajita Seasoning",
+   "search_aliases": [
+    "fajita seasoning",
+    "fajita spice"
+   ]
+  },
+  {
+   "id": "fast-fry-beef",
+   "display_name": "Fast-Fry Beef",
+   "search_aliases": [
+    "fast fry beef",
+    "minute steak"
+   ]
+  },
+  {
+   "id": "food-storage-bags",
+   "display_name": "Food Storage Bags",
+   "search_aliases": [
+    "freezer bags",
+    "plastic bags",
+    "sandwich bags"
+   ]
+  },
+  {
+   "id": "french-fries",
+   "display_name": "French Fries",
+   "search_aliases": [
+    "fries",
+    "frozen fries"
+   ]
+  },
+  {
+   "id": "frozen-chicken-strips",
+   "display_name": "Frozen Chicken Strips",
+   "search_aliases": [
+    "chicken fingers",
+    "chicken strips",
+    "chicken tenders"
+   ]
+  },
+  {
+   "id": "frozen-mixed-vegetables",
+   "display_name": "Frozen Mixed Vegetables",
+   "search_aliases": [
+    "frozen vegetables",
+    "mixed veg"
+   ]
+  },
+  {
+   "id": "frozen-pizza",
+   "display_name": "Frozen Pizza",
+   "search_aliases": [
+    "frozen pizza",
+    "pizza"
+   ]
+  },
+  {
+   "id": "garbage-bags",
+   "display_name": "Garbage Bags",
+   "search_aliases": [
+    "bin bags",
+    "garbage bags",
+    "trash bags"
+   ]
+  },
+  {
+   "id": "garlic",
+   "display_name": "Garlic",
+   "search_aliases": [
+    "garlic bulb"
+   ]
+  },
+  {
+   "id": "gelato",
+   "display_name": "Gelato",
+   "search_aliases": [
+    "gelato"
+   ]
+  },
+  {
+   "id": "glass-cleaner",
+   "display_name": "Glass Cleaner",
+   "search_aliases": [
+    "glass cleaner",
+    "windex"
+   ]
+  },
+  {
+   "id": "grape-tomatoes",
+   "display_name": "Grape Tomatoes",
+   "search_aliases": [
+    "grape tomato"
+   ]
+  },
+  {
+   "id": "greek-yogurt",
+   "display_name": "Greek Yogurt",
+   "search_aliases": [
+    "greek yoghurt",
+    "yogurt"
+   ]
+  },
+  {
+   "id": "green-beans",
+   "display_name": "Green Beans",
+   "search_aliases": [
+    "green beans",
+    "string beans"
+   ]
+  },
+  {
+   "id": "green-bell-pepper",
+   "display_name": "Green Bell Pepper",
+   "search_aliases": [
+    "bell pepper",
+    "green pepper"
+   ]
+  },
+  {
+   "id": "green-grapes",
+   "display_name": "Green Grapes",
+   "search_aliases": [
+    "green grapes",
+    "seedless grapes"
+   ]
+  },
+  {
+   "id": "green-leaf-lettuce",
+   "display_name": "Green Leaf Lettuce",
+   "search_aliases": [
+    "green lettuce",
+    "leaf lettuce"
+   ]
+  },
+  {
+   "id": "green-onion",
+   "display_name": "Green Onion",
+   "search_aliases": [
+    "scallion",
+    "scallions",
+    "spring onion"
+   ]
+  },
+  {
+   "id": "green-seedless-grapes",
+   "display_name": "Green Seedless Grapes",
+   "search_aliases": [
+    "green grapes",
+    "seedless grapes"
+   ]
+  },
+  {
+   "id": "ground-beef",
+   "display_name": "Ground Beef",
+   "search_aliases": [
+    "hamburger",
+    "minced beef"
+   ]
+  },
+  {
+   "id": "ground-pork",
+   "display_name": "Ground Pork",
+   "search_aliases": [
+    "pork mince"
+   ]
+  },
+  {
+   "id": "ground-turkey",
+   "display_name": "Ground Turkey",
+   "search_aliases": [
+    "ground turkey",
+    "turkey mince"
+   ]
+  },
+  {
+   "id": "haddock-fillet",
+   "display_name": "Haddock Fillet",
+   "search_aliases": [
+    "haddock",
+    "white fish"
+   ]
+  },
+  {
+   "id": "hand-soap",
+   "display_name": "Hand Soap",
+   "search_aliases": [
+    "hand wash",
+    "soap"
+   ]
+  },
+  {
+   "id": "ice-cream",
+   "display_name": "Ice Cream",
+   "search_aliases": [
+    "ice cream"
+   ]
+  },
+  {
+   "id": "iceberg-lettuce",
+   "display_name": "Iceberg Lettuce",
+   "search_aliases": [
+    "iceberg",
+    "lettuce"
+   ]
+  },
+  {
+   "id": "iced-tea",
+   "display_name": "Iced Tea",
+   "search_aliases": [
+    "ice tea",
+    "iced tea"
+   ]
+  },
+  {
+   "id": "italian-sausage",
+   "display_name": "Italian Sausage",
+   "search_aliases": [
+    "italian sausage",
+    "sausages"
+   ]
+  },
+  {
+   "id": "jam",
+   "display_name": "Jam",
+   "search_aliases": [
+    "fruit spread",
+    "strawberry jam"
+   ]
+  },
+  {
+   "id": "juice-boxes",
+   "display_name": "Juice Boxes",
+   "search_aliases": [
+    "juice box",
+    "kids juice"
+   ]
+  },
+  {
+   "id": "ketchup",
+   "display_name": "Ketchup",
+   "search_aliases": [
+    "tomato ketchup"
+   ]
+  },
+  {
+   "id": "kiwi",
+   "display_name": "Kiwi",
+   "search_aliases": [
+    "kiwifruit",
+    "kiwis"
+   ]
+  },
+  {
+   "id": "laundry-detergent",
+   "display_name": "Laundry Detergent",
+   "search_aliases": [
+    "detergent",
+    "laundry soap"
+   ]
+  },
+  {
+   "id": "laundry-pods",
+   "display_name": "Laundry Pods",
+   "search_aliases": [
+    "detergent pods",
+    "laundry pods"
+   ]
+  },
+  {
+   "id": "lays-old-fashioned-bbq-chips",
+   "display_name": "Lay's Old Fashioned BBQ Chips",
+   "search_aliases": [
+    "lays bbq",
+    "lays old fsh bbq",
+    "old fashioned bbq chips"
+   ]
+  },
+  {
+   "id": "lean-ground-beef",
+   "display_name": "Lean Ground Beef",
+   "search_aliases": [
+    "ground beef",
+    "lean hamburger"
+   ]
+  },
+  {
+   "id": "lemons",
+   "display_name": "Lemons",
+   "search_aliases": [
+    "lemon"
+   ]
+  },
+  {
+   "id": "light-bulbs",
+   "display_name": "Light Bulbs",
+   "search_aliases": [
+    "bulbs",
+    "led bulbs"
+   ]
+  },
+  {
+   "id": "limes",
+   "display_name": "Limes",
+   "search_aliases": [
+    "lime"
+   ]
+  },
+  {
+   "id": "lysol",
+   "display_name": "Lysol",
+   "search_aliases": [
+    "disinfectant",
+    "lysol cleaner"
+   ]
+  },
+  {
+   "id": "marilu-s-mac-and-cheese",
+   "display_name": "Marilu's Mac and Cheese",
+   "search_aliases": [
+    "mac & cheese",
+    "macaroni cheese"
+   ]
+  },
+  {
+   "id": "mascara",
+   "display_name": "Mascara",
+   "search_aliases": [
+    "makeup",
+    "mascara"
+   ]
+  },
+  {
+   "id": "mayonnaise",
+   "display_name": "Mayonnaise",
+   "search_aliases": [
+    "mayo",
+    "mayonnaise"
+   ]
+  },
+  {
+   "id": "meatballs",
+   "display_name": "Meatballs",
+   "search_aliases": [
+    "beef meatballs",
+    "italian meatballs"
+   ]
+  },
+  {
+   "id": "mini-cucumbers",
+   "display_name": "Mini Cucumbers",
+   "search_aliases": [
+    "mini cucumber",
+    "persian cucumber"
+   ]
+  },
+  {
+   "id": "mr-clean",
+   "display_name": "Mr. Clean",
+   "search_aliases": [
+    "cleaner",
+    "mr clean"
+   ]
+  },
+  {
+   "id": "mushrooms",
+   "display_name": "Mushrooms",
+   "search_aliases": [
+    "cremini mushrooms",
+    "white mushrooms"
+   ]
+  },
+  {
+   "id": "mustard-powder",
+   "display_name": "Mustard Powder",
+   "search_aliases": [
+    "dry mustard",
+    "mustard powder"
+   ]
+  },
+  {
+   "id": "natrel-2-percent-lactose-free-milk",
+   "display_name": "Natrel 2% Lactose Free Milk",
+   "search_aliases": [
+    "lactose free milk",
+    "natrel 2 lact o",
+    "natrel lactose free"
+   ]
+  },
+  {
+   "id": "neilson-2-milk-2-l",
+   "display_name": "Neilson 2% Milk 2 L",
+   "search_aliases": [
+    "2 percent milk",
+    "neilson"
+   ]
+  },
+  {
+   "id": "neilson-2-milk-4-l",
+   "display_name": "Neilson 2% Milk 4 L",
+   "search_aliases": [
+    "2 percent milk",
+    "neilson"
+   ]
+  },
+  {
+   "id": "new-york-strip",
+   "display_name": "New York Strip",
+   "search_aliases": [
+    "new york strip steak",
+    "ny strip",
+    "steak",
+    "strip steak"
+   ]
+  },
+  {
+   "id": "oatmeal",
+   "display_name": "Oatmeal",
+   "search_aliases": [
+    "oats",
+    "porridge"
+   ]
+  },
+  {
+   "id": "olive-oil",
+   "display_name": "Olive Oil",
+   "search_aliases": [
+    "evoo",
+    "extra virgin olive oil"
+   ]
+  },
+  {
+   "id": "orange-juice",
+   "display_name": "Orange Juice",
+   "search_aliases": [
+    "oj",
+    "orange juice"
+   ]
+  },
+  {
+   "id": "oranges",
+   "display_name": "Oranges",
+   "search_aliases": [
+    "orange"
+   ]
+  },
+  {
+   "id": "panko-bread-crumbs",
+   "display_name": "Panko Bread Crumbs",
+   "search_aliases": [
+    "bread crumbs",
+    "breadcrumbs",
+    "panko"
+   ]
+  },
+  {
+   "id": "paper-towels",
+   "display_name": "Paper Towels",
+   "search_aliases": [
+    "paper towel"
+   ]
+  },
+  {
+   "id": "parchment-paper",
+   "display_name": "Parchment Paper",
+   "search_aliases": [
+    "baking paper",
+    "parchment"
+   ]
+  },
+  {
+   "id": "parmesan-cheese",
+   "display_name": "Parmesan Cheese",
+   "search_aliases": [
+    "parm",
+    "parmesan",
+    "parmesan wedge"
+   ]
+  },
+  {
+   "id": "pasta",
+   "display_name": "Pasta",
+   "search_aliases": [
+    "pasta",
+    "penne",
+    "spaghetti"
+   ]
+  },
+  {
+   "id": "pasta-sauce",
+   "display_name": "Pasta Sauce",
+   "search_aliases": [
+    "spaghetti sauce",
+    "tomato sauce"
+   ]
+  },
+  {
+   "id": "peanut-butter",
+   "display_name": "Peanut Butter",
+   "search_aliases": [
+    "peanut butter"
+   ]
+  },
+  {
+   "id": "pineapple",
+   "display_name": "Pineapple",
+   "search_aliases": [
+    "pineapple"
+   ]
+  },
+  {
+   "id": "plastic-wrap",
+   "display_name": "Plastic Wrap",
+   "search_aliases": [
+    "cling wrap",
+    "saran wrap"
+   ]
+  },
+  {
+   "id": "popsicles",
+   "display_name": "Popsicles",
+   "search_aliases": [
+    "freezies",
+    "ice pops",
+    "popsicles"
+   ]
+  },
+  {
+   "id": "pork-back-ribs",
+   "display_name": "Pork Back Ribs",
+   "search_aliases": [
+    "baby back ribs",
+    "pork ribs"
+   ]
+  },
+  {
+   "id": "pork-chops",
+   "display_name": "Pork Chops",
+   "search_aliases": [
+    "loin chop",
+    "pork chop"
+   ]
+  },
+  {
+   "id": "pork-tenderloin",
+   "display_name": "Pork Tenderloin",
+   "search_aliases": [
+    "pork loin",
+    "tenderloin"
+   ]
+  },
+  {
+   "id": "potatoes",
+   "display_name": "Potatoes",
+   "search_aliases": [
+    "potato",
+    "white potatoes"
+   ]
+  },
+  {
+   "id": "prepared-salad",
+   "display_name": "Prepared Salad",
+   "search_aliases": [
+    "prepared salad",
+    "salad"
+   ]
+  },
+  {
+   "id": "primer",
+   "display_name": "Primer",
+   "search_aliases": [
+    "face primer",
+    "makeup primer"
+   ]
+  },
+  {
+   "id": "raspberries",
+   "display_name": "Raspberries",
+   "search_aliases": [
+    "raspberry"
+   ]
+  },
+  {
+   "id": "razors",
+   "display_name": "Razors",
+   "search_aliases": [
+    "razor blades",
+    "shaving razor"
+   ]
+  },
+  {
+   "id": "recycle-bags",
+   "display_name": "Recycle Bags",
+   "search_aliases": [
+    "blue bags",
+    "blue box bags",
+    "recycling bags"
+   ]
+  },
+  {
+   "id": "red-bell-pepper",
+   "display_name": "Red Bell Pepper",
+   "search_aliases": [
+    "bell pepper",
+    "red pepper"
+   ]
+  },
+  {
+   "id": "red-grapes",
+   "display_name": "Red Grapes",
+   "search_aliases": [
+    "red grapes",
+    "seedless grapes"
+   ]
+  },
+  {
+   "id": "red-onion",
+   "display_name": "Red Onion",
+   "search_aliases": [
+    "onion",
+    "red onions"
+   ]
+  },
+  {
+   "id": "ribeye-steak",
+   "display_name": "Ribeye Steak",
+   "search_aliases": [
+    "rib eye",
+    "steak"
+   ]
+  },
+  {
+   "id": "rice",
+   "display_name": "Rice",
+   "search_aliases": [
+    "basmati rice",
+    "jasmine rice",
+    "white rice"
+   ]
+  },
+  {
+   "id": "ritz-crackers",
+   "display_name": "Ritz Crackers",
+   "search_aliases": [
+    "crackers",
+    "ritz"
+   ]
+  },
+  {
+   "id": "romaine-hearts-3-pack",
+   "display_name": "Romaine Hearts 3-Pack",
+   "search_aliases": [
+    "lettuce",
+    "romaine hearts"
+   ]
+  },
+  {
+   "id": "romaine-lettuce",
+   "display_name": "Romaine Lettuce",
+   "search_aliases": [
+    "lettuce",
+    "romaine",
+    "romaine hearts"
+   ]
+  },
+  {
+   "id": "rotisserie-chicken",
+   "display_name": "Rotisserie Chicken",
+   "search_aliases": [
+    "roast chicken",
+    "rotisserie"
+   ]
+  },
+  {
+   "id": "russet-potatoes",
+   "display_name": "Russet Potatoes",
+   "search_aliases": [
+    "potatoes",
+    "ruset"
+   ]
+  },
+  {
+   "id": "salsa",
+   "display_name": "Salsa",
+   "search_aliases": [
+    "salsa sauce"
+   ]
+  },
+  {
+   "id": "sandwich-bread",
+   "display_name": "Sandwich Bread",
+   "search_aliases": [
+    "bread",
+    "toast bread"
+   ]
+  },
+  {
+   "id": "shampoo",
+   "display_name": "Shampoo",
+   "search_aliases": [
+    "hair shampoo"
+   ]
+  },
+  {
+   "id": "shredded-tex-mex-cheese",
+   "display_name": "Shredded Tex-Mex Cheese",
+   "search_aliases": [
+    "shredded cheese",
+    "tex mex cheese"
+   ]
+  },
+  {
+   "id": "shrimp",
+   "display_name": "Shrimp",
+   "search_aliases": [
+    "prawns",
+    "shrimp"
+   ]
+  },
+  {
+   "id": "sirloin-steak",
+   "display_name": "Sirloin Steak",
+   "search_aliases": [
+    "sirloin",
+    "top sirloin"
+   ]
+  },
+  {
+   "id": "soup",
+   "display_name": "Soup",
+   "search_aliases": [
+    "prepared soup",
+    "soup"
+   ]
+  },
+  {
+   "id": "sour-cream",
+   "display_name": "Sour Cream",
+   "search_aliases": [
+    "sour cream"
+   ]
+  },
+  {
+   "id": "soy-sauce",
+   "display_name": "Soy Sauce",
+   "search_aliases": [
+    "soya sauce"
+   ]
+  },
+  {
+   "id": "spinach",
+   "display_name": "Spinach",
+   "search_aliases": [
+    "baby spinach",
+    "spinach"
+   ]
+  },
+  {
+   "id": "stain-remover",
+   "display_name": "Stain Remover",
+   "search_aliases": [
+    "oxiclean",
+    "stain remover"
+   ]
+  },
+  {
+   "id": "steak-spice",
+   "display_name": "Steak Spice",
+   "search_aliases": [
+    "montreal steak spice",
+    "steak seasoning"
+   ]
+  },
+  {
+   "id": "stewing-beef",
+   "display_name": "Stewing Beef",
+   "search_aliases": [
+    "beef cubes",
+    "stew beef"
+   ]
+  },
+  {
+   "id": "strawberries",
+   "display_name": "Strawberries",
+   "search_aliases": [
+    "strawberry"
+   ]
+  },
+  {
+   "id": "sumol-passion-fruit",
+   "display_name": "Sumol Passion Fruit",
+   "search_aliases": [
+    "sumol",
+    "sumol passionfruit",
+    "sumol psnfrt jce"
+   ]
+  },
+  {
+   "id": "sweet-potato",
+   "display_name": "Sweet Potato",
+   "search_aliases": [
+    "sweet potatoes",
+    "yam"
+   ]
+  },
+  {
+   "id": "taco-kit",
+   "display_name": "Taco Kit",
+   "search_aliases": [
+    "taco seasoning",
+    "taco shells",
+    "tacos"
+   ]
+  },
+  {
+   "id": "taco-seasoning",
+   "display_name": "Taco Seasoning",
+   "search_aliases": [
+    "taco seasoning mix",
+    "taco spice mix"
+   ]
+  },
+  {
+   "id": "toast-bread",
+   "display_name": "Toast Bread",
+   "search_aliases": [
+    "bread",
+    "thick sliced bread",
+    "toasting bread"
+   ]
+  },
+  {
+   "id": "toilet-bowl-cleaner",
+   "display_name": "Toilet Bowl Cleaner",
+   "search_aliases": [
+    "toilet cleaner"
+   ]
+  },
+  {
+   "id": "toilet-paper",
+   "display_name": "Toilet Paper",
+   "search_aliases": [
+    "bath tissue",
+    "toilet tissue"
+   ]
+  },
+  {
+   "id": "tomatoes",
+   "display_name": "Tomatoes",
+   "search_aliases": [
+    "field tomatoes",
+    "tomato"
+   ]
+  },
+  {
+   "id": "toothbrush",
+   "display_name": "Toothbrush",
+   "search_aliases": [
+    "tooth brush"
+   ]
+  },
+  {
+   "id": "toothpaste",
+   "display_name": "Toothpaste",
+   "search_aliases": [
+    "tooth paste"
+   ]
+  },
+  {
+   "id": "tortillas",
+   "display_name": "Tortillas",
+   "search_aliases": [
+    "soft flour tortillas",
+    "wraps"
+   ]
+  },
+  {
+   "id": "tuna-steaks",
+   "display_name": "Tuna Steaks",
+   "search_aliases": [
+    "tuna steak"
+   ]
+  },
+  {
+   "id": "vegetable-oil",
+   "display_name": "Vegetable Oil",
+   "search_aliases": [
+    "canola oil",
+    "cooking oil"
+   ]
+  },
+  {
+   "id": "watermelon",
+   "display_name": "Watermelon",
+   "search_aliases": [
+    "watermelon"
+   ]
+  },
+  {
+   "id": "white-onion",
+   "display_name": "White Onion",
+   "search_aliases": [
+    "onion",
+    "white onions"
+   ]
+  },
+  {
+   "id": "whole-chicken",
+   "display_name": "Whole Chicken",
+   "search_aliases": [
+    "roasting chicken",
+    "whole chicken"
+   ]
+  },
+  {
+   "id": "yellow-bell-pepper",
+   "display_name": "Yellow Bell Pepper",
+   "search_aliases": [
+    "bell pepper",
+    "yellow pepper"
+   ]
+  },
+  {
+   "id": "yellow-onion",
+   "display_name": "Yellow Onion",
+   "search_aliases": [
+    "onion",
+    "yellow onions"
+   ]
+  },
+  {
+   "id": "yellow-onions-3-lb-bag",
+   "display_name": "Yellow Onions 3 lb Bag",
+   "search_aliases": [
+    "onion bag",
+    "yellow onions"
+   ]
+  },
+  {
+   "id": "yogurt",
+   "display_name": "Yogurt",
+   "search_aliases": [
+    "yoghurt"
+   ]
+  },
+  {
+   "id": "yukon-gold-potatoes",
+   "display_name": "Yukon Gold Potatoes",
+   "search_aliases": [
+    "gold potatoes",
+    "yellow potatoes"
+   ]
+  },
+  {
+   "id": "ziploc-bags",
+   "display_name": "Ziploc Bags",
+   "search_aliases": [
+    "freezer bags",
+    "plastic bags",
+    "resealable bags",
+    "sandwich bags",
+    "zip bags",
+    "zip lock bags",
+    "ziploc"
+   ]
+  },
+  {
+   "id": "zucchini",
+   "display_name": "Zucchini",
+   "search_aliases": [
+    "courgette",
+    "zucchini"
+   ]
+  }
+ ]
+}

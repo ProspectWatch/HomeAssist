@@ -96,7 +96,6 @@ EXTRA_PAIRS = [
     ("Household", "Pet"),
     ("Pantry", "Bread"),
     ("Pantry", "Snacks"),
-    ("Confectionery", "Fruit Snacks"),
 ]
 
 by_cat = {}
