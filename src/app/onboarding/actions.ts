@@ -65,6 +65,11 @@ export async function createHousehold(input: CreateHouseholdInput): Promise<Acti
   });
   if (settingsError) return { ok: false, message: settingsError.message };
 
+  // Best-effort: gives a brand-new household a starting point for product
+  // preferences (see seed_starter_household_preferences() in
+  // 0004_product_catalog.sql). Never blocks onboarding if it fails.
+  await supabase.rpc("seed_starter_household_preferences", { target_household_id: household.id });
+
   redirect("/home");
 }
 
