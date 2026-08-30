@@ -2,28 +2,56 @@
 
 import { revalidatePath } from "next/cache";
 import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
-import { ingestReceipt, verifyReceipt } from "@/lib/data/receipt-pipeline";
+import { ingestStoredReceipt, receiptUploadTarget, verifyReceipt } from "@/lib/data/receipt-pipeline";
+import { validateReceiptUpload } from "@/lib/receipts/upload";
 import { addHouseholdNeed } from "@/app/(shell)/shop/pantry/actions";
 
 export type UploadResult = ActionResult & { receiptId?: string; duplicateWarning?: string | null };
 
-/** Upload + extract. Always lands in review — never auto-verified (§3). */
-export async function uploadReceipt(formData: FormData): Promise<UploadResult> {
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) {
-    return { ok: false, message: "Choose a receipt photo first." };
-  }
-  if (file.size > 15 * 1024 * 1024) {
-    return { ok: false, message: "That image is over 15 MB — try a smaller photo." };
-  }
+export type UploadTargetResult = { ok: true; storagePath: string } | { ok: false; message: string };
 
+/**
+ * Step 1 of an upload: hand the browser the single path it may write to.
+ *
+ * The photo itself never passes through a Server Action. A Vercel Function
+ * rejects any request body over 4.5 MB with a 413 — a limit no Next.js
+ * `bodySizeLimit` setting can raise — and a phone receipt photo is routinely
+ * larger than that. The browser uploads to private Storage under its own
+ * session instead, so only this path and the tiny reference in step 2 cross a
+ * Server Action.
+ */
+export async function prepareReceiptUpload(file: {
+  filename: string;
+  mediaType: string;
+  size: number;
+}): Promise<UploadTargetResult> {
+  const check = validateReceiptUpload({ size: file.size, mediaType: file.mediaType });
+  if (!check.ok) return check;
+
+  const result = await runHouseholdAction<UploadTargetResult>(async (_supabase, householdId) => ({
+    ok: true,
+    storagePath: receiptUploadTarget(householdId, file.filename),
+  }));
+  if (!result.ok) return result;
+  // runHouseholdAction widens to ActionResult for its own "not signed in" and
+  // "request failed" cases, both of which are ok: false and returned above.
+  return "storagePath" in result
+    ? result
+    : { ok: false, message: "Couldn't start that upload — try again." };
+}
+
+/**
+ * Step 2: read the uploaded object and run it through the existing pipeline.
+ * Extraction stays server-side; the payload here is a path, not an image.
+ * Always lands in review — never auto-verified (§3).
+ */
+export async function ingestUploadedReceipt(upload: {
+  storagePath: string;
+  mediaType: string;
+  filename: string;
+}): Promise<UploadResult> {
   return runHouseholdAction<UploadResult>(async (_supabase, householdId) => {
-    const bytes = new Uint8Array(await file.arrayBuffer());
-    const outcome = await ingestReceipt(householdId, {
-      bytes,
-      mediaType: file.type || "image/jpeg",
-      filename: file.name || "receipt.jpg",
-    });
+    const outcome = await ingestStoredReceipt(householdId, upload);
     if (!outcome.ok) return { ok: false, message: outcome.message };
 
     revalidatePath("/receipts");
