@@ -4,14 +4,32 @@ import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { sendMagicLink } from "./actions";
+import { useRouter } from "next/navigation";
+import { sendMagicLink, verifyEmailCode } from "./actions";
 
 export function LoginView({ initialError }: { initialError?: string }) {
   const [email, setEmail] = React.useState("");
   const [pending, startTransition] = React.useTransition();
+  const [code, setCode] = React.useState("");
+  const [codeError, setCodeError] = React.useState<string | null>(null);
+  const router = useRouter();
   const [status, setStatus] = React.useState<{ kind: "sent" | "error"; message?: string } | null>(
     initialError ? { kind: "error", message: initialError } : null,
   );
+
+  function submitCode(e: React.FormEvent) {
+    e.preventDefault();
+    setCodeError(null);
+    startTransition(async () => {
+      const res = await verifyEmailCode(email, code);
+      if (!res.ok) {
+        setCodeError(res.message);
+        return;
+      }
+      router.replace("/home");
+      router.refresh();
+    });
+  }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,17 +49,39 @@ export function LoginView({ initialError }: { initialError?: string }) {
 
         <Card className="p-5">
           {status?.kind === "sent" ? (
-            <div className="py-2 text-center">
-              <p className="text-[14px] font-semibold text-ink">Check your email</p>
-              <p className="mt-1.5 text-[13px] text-muted">
-                We sent a sign-in link to {email}. Open it on this device to continue.
+            <div className="py-1">
+              <p className="text-center text-[14px] font-semibold text-ink">Check your email</p>
+              <p className="mt-1.5 text-center text-[13px] text-muted">
+                We sent a sign-in code and a link to {email}.
               </p>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-4"
-                onClick={() => setStatus(null)}
-              >
+
+              {/* The code works no matter where the email opens; the link only
+                  works in this browser. */}
+              <form onSubmit={submitCode} className="mt-4 flex flex-col gap-2">
+                <label htmlFor="code" className="text-[12.5px] font-semibold text-ink">
+                  Enter the 6-digit code
+                </label>
+                <Input
+                  id="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  className="text-center text-[20px] tracking-[0.4em]"
+                />
+                {codeError ? <p className="text-[12.5px] text-[#b5482f]">{codeError}</p> : null}
+                <Button type="submit" size="lg" disabled={pending || code.length !== 6}>
+                  {pending ? "Signing in…" : "Sign in"}
+                </Button>
+              </form>
+
+              <p className="mt-3 text-center text-[11.5px] text-muted2">
+                Tapping the link in the email works too — but only if it opens in this browser.
+              </p>
+              <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setStatus(null)}>
                 Use a different email
               </Button>
             </div>
