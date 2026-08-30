@@ -11,12 +11,34 @@ export async function addPantryRegularBuy(
   if (!trimmed) return { ok: false, message: "Type something to add first." };
 
   return runHouseholdAction(async (supabase, householdId) => {
+    // A catalogue-backed pick becomes a regular buy in the household
+    // preference layer, matching how the seeded library is stored. Upserting
+    // on the (household_id, scope_type, scope_key) unique key keeps re-adding
+    // the same product idempotent instead of duplicating it.
+    if (options?.catalogProductId) {
+      const { error } = await supabase.from("household_product_preferences").upsert(
+        {
+          household_id: householdId,
+          scope_type: "product",
+          scope_key: options.catalogProductId,
+          label: trimmed,
+          regular_buy: true,
+        },
+        { onConflict: "household_id,scope_type,scope_key" },
+      );
+      if (error) return { ok: false, message: error.message };
+      revalidatePath("/shop/pantry");
+      return { ok: true };
+    }
+
+    // A free-typed item has no catalogue row to point at, so it stays a
+    // household-owned product SKU.
     const { error } = await supabase.from("products").insert({
       household_id: householdId,
       title: trimmed,
       department_key: "kitchen",
       is_regular_buy: true,
-      catalog_product_id: options?.catalogProductId ?? null,
+      catalog_product_id: null,
       image_url: options?.imageUrl ?? null,
       package_detail: options?.packageDetail ?? null,
     });

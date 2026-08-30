@@ -1,6 +1,33 @@
 import Image from "next/image";
-import { Package } from "lucide-react";
+import {
+  Apple,
+  Beef,
+  CupSoda,
+  Egg,
+  Package,
+  Snowflake,
+  SprayCan,
+  Wheat,
+  type LucideIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
+
+/**
+ * Category fallbacks for products whose photo hasn't been sourced yet (see
+ * docs/image-acquisition-manifest.csv). A recognisable category mark reads far
+ * better on a phone than a generic box — and never implies packaging we don't
+ * actually have an image of.
+ */
+const CATEGORY_ICONS: Record<string, LucideIcon> = {
+  Produce: Apple,
+  "Meat & Seafood": Beef,
+  "Dairy & Eggs": Egg,
+  Pantry: Wheat,
+  Frozen: Snowflake,
+  Drinks: CupSoda,
+  Household: SprayCan,
+  "Deli & Prepared": Package,
+};
 
 /**
  * Product photo slot. Per the handoff's PRODUCT IMAGE RULE: never crop
@@ -12,13 +39,17 @@ export function ProductImage({
   src,
   alt,
   height,
+  category,
   className,
 }: {
   src: string | null;
   alt: string;
   height: number;
+  category?: string | null;
   className?: string;
 }) {
+  const FallbackIcon = (category && CATEGORY_ICONS[category]) || Package;
+
   return (
     <div className={cn("relative bg-white", className)} style={{ height }}>
       {src ? (
@@ -26,8 +57,8 @@ export function ProductImage({
           <Image src={src} alt={alt} fill sizes="200px" className="object-contain" />
         </div>
       ) : (
-        <div className="flex h-full items-center justify-center">
-          <Package className="h-6 w-6 text-muted2" aria-hidden="true" />
+        <div className="flex h-full items-center justify-center bg-cream/60">
+          <FallbackIcon className="h-7 w-7 text-muted2" aria-hidden="true" />
         </div>
       )}
     </div>
