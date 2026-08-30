@@ -14,6 +14,7 @@ import type { Deal } from "@/lib/data/deals";
 import type { WatchItem } from "@/lib/data/watch";
 import type { DepartmentSummary } from "@/lib/data/departments";
 import type { ShoppingPlanResult } from "@/lib/shopping/types";
+import type { InventoryCounts } from "@/lib/data/inventory";
 
 export function HomeView({
   stats,
@@ -21,12 +22,14 @@ export function HomeView({
   watching,
   departments,
   shoppingPlan,
+  inventory,
 }: {
   stats: HomeStats;
   deals: Deal[];
   watching: WatchItem[];
   departments: DepartmentSummary[];
   shoppingPlan: ShoppingPlanResult;
+  inventory: InventoryCounts;
 }) {
   const { openAddWatch } = useAppShell();
   const showToast = useToast();
@@ -70,9 +73,13 @@ export function HomeView({
           <div className="font-serif text-[21px]">{stats.activeGroceryCount}</div>
           <div className="text-[11px] text-muted">items on the list</div>
         </Link>
-        <Link href="/shop/deals" className="rounded-(--radius-md) border border-line bg-white p-3.5 shadow-(--shadow-card)">
-          <div className="font-serif text-[21px]">{stats.dealsCount}</div>
-          <div className="text-[11px] text-muted">deals worth checking</div>
+        <Link href="/shop/pantry" className="rounded-(--radius-md) border border-line bg-white p-3.5 shadow-(--shadow-card)">
+          <div className="font-serif text-[21px]">{inventory.low}</div>
+          <div className="text-[11px] text-muted">running low</div>
+        </Link>
+        <Link href="/shop/pantry" className="rounded-(--radius-md) border border-line bg-white p-3.5 shadow-(--shadow-card)">
+          <div className="font-serif text-[21px]">{inventory.out}</div>
+          <div className="text-[11px] text-muted">out of stock</div>
         </Link>
         <Link href="/watch" className="rounded-(--radius-md) border border-line bg-white p-3.5 shadow-(--shadow-card)">
           <div className="font-serif text-[21px]">{stats.watchCount}</div>

@@ -16,9 +16,9 @@ export const NOT_CONNECTED: ActionResult = {
  * "the request failed" both surface as an honest ActionResult instead of
  * a fabricated success or an unhandled exception.
  */
-export async function runHouseholdAction(
-  fn: (supabase: SupabaseClient<Database>, householdId: string) => Promise<ActionResult>,
-): Promise<ActionResult> {
+export async function runHouseholdAction<T extends ActionResult = ActionResult>(
+  fn: (supabase: SupabaseClient<Database>, householdId: string) => Promise<T>,
+): Promise<T | ActionResult> {
   const householdId = await getCurrentHouseholdId();
   if (!householdId) return NOT_CONNECTED;
   try {

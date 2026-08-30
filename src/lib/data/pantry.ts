@@ -1,13 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
+import type { InventoryStatus } from "@/lib/data/inventory";
 
 export type PantryProduct = {
   id: string;
+  /** Catalogue identity — what inventory and list actions key off. */
+  catalog_product_id: string | null;
   title: string;
   category: string | null;
   package_detail: string | null;
   target_price_cents: number | null;
-  /** Real inventory state, only ever present for a household `products` row. */
+  /** Legacy per-SKU stock field on `products`; distinct from inventory_status. */
   stock_status: "good" | "low" | null;
+  /** What the household has right now. UNKNOWN until they say otherwise. */
+  inventory_status: InventoryStatus;
+  /** True when this need is already on the active grocery list. */
+  on_list: boolean;
   /** Where the household keeps it — a preference-layer hint, not inventory. */
   stock_location: string | null;
   image_url: string | null;
@@ -19,10 +26,10 @@ export type PantryProduct = {
 type PreferenceRow = {
   scope_key: string;
   label: string;
+  stock_location: string | null;
   preferred_brand: string | null;
   preferred_variant: string | null;
   preferred_store: string | null;
-  stock_location: string | null;
   catalog_product: {
     display_name: string;
     category: string;
@@ -70,7 +77,7 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
   if (!householdId) return [];
   try {
     const supabase = await createClient();
-    const [prefRes, productRes] = await Promise.all([
+    const [prefRes, productRes, inventoryRes, listRes] = await Promise.all([
       supabase
         .from("household_product_preferences")
         .select(
@@ -86,10 +93,43 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
         )
         .eq("household_id", householdId)
         .eq("is_regular_buy", true),
+      supabase
+        .from("household_inventory_state")
+        .select("catalog_product_id, status")
+        .eq("household_id", householdId),
+      supabase
+        .from("grocery_items")
+        .select("name, catalog_product_id")
+        .eq("household_id", householdId)
+        .eq("checked", false),
     ]);
 
     const prefRows = (prefRes.data ?? []) as unknown as PreferenceRow[];
     const productRows = (productRes.data ?? []) as unknown as LegacyProductRow[];
+
+    const inventory = new Map<string, InventoryStatus>();
+    for (const row of (inventoryRes.data ?? []) as {
+      catalog_product_id: string;
+      status: InventoryStatus;
+    }[]) {
+      inventory.set(row.catalog_product_id, row.status);
+    }
+
+    // Active list membership, by catalogue identity and by exact name for
+    // rows that predate catalogue linking — the same conservative rule the
+    // addHouseholdNeed service uses.
+    const listCatalogIds = new Set<string>();
+    const listNames = new Set<string>();
+    for (const row of (listRes.data ?? []) as {
+      name: string;
+      catalog_product_id: string | null;
+    }[]) {
+      if (row.catalog_product_id) listCatalogIds.add(row.catalog_product_id);
+      listNames.add(row.name.trim().toLowerCase().replace(/\s+/g, " "));
+    }
+    const onList = (catalogId: string | null, name: string) =>
+      (catalogId !== null && listCatalogIds.has(catalogId)) ||
+      listNames.has(name.trim().toLowerCase().replace(/\s+/g, " "));
 
     // Household SKU rows carry the only real inventory/target-price data, so
     // index them by catalogue id to enrich the preference-backed entries.
@@ -101,13 +141,19 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
     const fromPreferences: PantryProduct[] = prefRows.map((row) => {
       const sku = skuByCatalogId.get(row.scope_key);
       const catalog = row.catalog_product;
+      // §10: the need stays what the household calls it ("Eggs"), not a
+      // brand-specific SKU name. The brand lives in the preference context.
+      const title = row.label || catalog?.display_name || row.scope_key;
       return {
         id: `pref:${row.scope_key}`,
-        title: catalog?.display_name ?? row.label,
+        catalog_product_id: row.scope_key,
+        title,
         category: catalog?.category ?? null,
         package_detail: sku?.package_detail ?? catalog?.default_unit ?? null,
         target_price_cents: sku?.target_price_cents ?? null,
         stock_status: sku?.stock_status ?? null,
+        inventory_status: inventory.get(row.scope_key) ?? "UNKNOWN",
+        on_list: onList(row.scope_key, title),
         stock_location: row.stock_location,
         // Never show an image the catalogue hasn't marked ready.
         image_url: catalog?.image_ready ? catalog.image_url : (sku?.image_url ?? null),
@@ -121,11 +167,16 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
       .filter((row) => !(row.catalog_product_id && covered.has(row.catalog_product_id)))
       .map((row) => ({
         id: row.id,
+        catalog_product_id: row.catalog_product_id,
         title: row.title,
         category: null,
         package_detail: row.package_detail,
         target_price_cents: row.target_price_cents,
         stock_status: row.stock_status,
+        inventory_status: row.catalog_product_id
+          ? (inventory.get(row.catalog_product_id) ?? "UNKNOWN")
+          : ("UNKNOWN" as const),
+        on_list: onList(row.catalog_product_id, row.title),
         stock_location: null,
         image_url: row.image_url,
         preference_hint: null,
@@ -163,11 +214,14 @@ export async function getDepartmentRegularBuys(
     if (error || !data) return [];
     return (data as unknown as LegacyProductRow[]).map((row) => ({
       id: row.id,
+      catalog_product_id: row.catalog_product_id,
       title: row.title,
       category: null,
       package_detail: row.package_detail,
       target_price_cents: row.target_price_cents,
       stock_status: row.stock_status,
+      inventory_status: "UNKNOWN" as const,
+      on_list: false,
       stock_location: null,
       image_url: row.image_url,
       preference_hint: null,

@@ -201,8 +201,10 @@ export type Database = {
           household_id: string
           id: string
           name: string
+          note: string | null
           qty: string | null
           retailer_id: string | null
+          source: string
         }
         Insert: {
           added_by?: string | null
@@ -214,8 +216,10 @@ export type Database = {
           household_id: string
           id?: string
           name: string
+          note?: string | null
           qty?: string | null
           retailer_id?: string | null
+          source?: string
         }
         Update: {
           added_by?: string | null
@@ -227,8 +231,10 @@ export type Database = {
           household_id?: string
           id?: string
           name?: string
+          note?: string | null
           qty?: string | null
           retailer_id?: string | null
+          source?: string
         }
         Relationships: [
           {
@@ -250,6 +256,57 @@ export type Database = {
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      household_inventory_state: {
+        Row: {
+          catalog_product_id: string
+          created_at: string
+          household_id: string
+          id: string
+          note: string | null
+          quantity: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          catalog_product_id: string
+          created_at?: string
+          household_id: string
+          id?: string
+          note?: string | null
+          quantity?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          catalog_product_id?: string
+          created_at?: string
+          household_id?: string
+          id?: string
+          note?: string | null
+          quantity?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_inventory_state_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_inventory_state_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
             referencedColumns: ["id"]
           },
         ]
