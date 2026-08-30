@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { sendMagicLink } from "./actions";
 
-export function LoginView() {
+export function LoginView({ initialError }: { initialError?: string }) {
   const [email, setEmail] = React.useState("");
   const [pending, startTransition] = React.useTransition();
-  const [status, setStatus] = React.useState<{ kind: "sent" | "error"; message?: string } | null>(null);
+  const [status, setStatus] = React.useState<{ kind: "sent" | "error"; message?: string } | null>(
+    initialError ? { kind: "error", message: initialError } : null,
+  );
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
