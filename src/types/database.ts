@@ -1002,6 +1002,150 @@ export type Database = {
         }
         Relationships: []
       }
+      retailer_locations: {
+        Row: {
+          active: boolean
+          address: string | null
+          city: string | null
+          created_at: string
+          distance_km: number | null
+          drive_time_minutes: number | null
+          external_location_id: string | null
+          id: string
+          last_verified_at: string | null
+          latitude: number | null
+          longitude: number | null
+          name: string
+          postal_code: string | null
+          province: string | null
+          retailer_id: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          distance_km?: number | null
+          drive_time_minutes?: number | null
+          external_location_id?: string | null
+          id?: string
+          last_verified_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          postal_code?: string | null
+          province?: string | null
+          retailer_id: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          distance_km?: number | null
+          drive_time_minutes?: number | null
+          external_location_id?: string | null
+          id?: string
+          last_verified_at?: string | null
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          postal_code?: string | null
+          province?: string | null
+          retailer_id?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      retailer_price_observations: {
+        Row: {
+          availability: string | null
+          catalog_product_id: string | null
+          created_at: string
+          external_product_id: string | null
+          id: string
+          match_confidence: number | null
+          match_method: string | null
+          match_status: string
+          observed_at: string
+          observed_on: string | null
+          observed_price_cents: number
+          package_size: string | null
+          promotion_text: string | null
+          raw_brand: string | null
+          raw_name: string | null
+          raw_payload: Json | null
+          regular_price_cents: number | null
+          retailer_id: string
+          retailer_location_id: string | null
+          source_type: string
+          source_url: string | null
+          unit: string | null
+          unit_price_text: string | null
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          availability?: string | null
+          catalog_product_id?: string | null
+          created_at?: string
+          external_product_id?: string | null
+          id?: string
+          match_confidence?: number | null
+          match_method?: string | null
+          match_status?: string
+          observed_at?: string
+          observed_on?: string | null
+          observed_price_cents: number
+          package_size?: string | null
+          promotion_text?: string | null
+          raw_brand?: string | null
+          raw_name?: string | null
+          raw_payload?: Json | null
+          regular_price_cents?: number | null
+          retailer_id: string
+          retailer_location_id?: string | null
+          source_type?: string
+          source_url?: string | null
+          unit?: string | null
+          unit_price_text?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          availability?: string | null
+          catalog_product_id?: string | null
+          created_at?: string
+          external_product_id?: string | null
+          id?: string
+          match_confidence?: number | null
+          match_method?: string | null
+          match_status?: string
+          observed_at?: string
+          observed_on?: string | null
+          observed_price_cents?: number
+          package_size?: string | null
+          promotion_text?: string | null
+          raw_brand?: string | null
+          raw_name?: string | null
+          raw_payload?: Json | null
+          regular_price_cents?: number | null
+          retailer_id?: string
+          retailer_location_id?: string | null
+          source_type?: string
+          source_url?: string | null
+          unit?: string | null
+          unit_price_text?: string | null
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       retailers: {
         Row: {
           created_at: string
@@ -1069,33 +1213,51 @@ export type Database = {
           created_at: string
           error: string | null
           finished_at: string | null
+          household_id: string | null
           id: string
+          prices_found: number
           products_scanned: number
           retailer_id: string | null
+          retailer_location_id: string | null
+          source: string
           started_at: string | null
           status: string
+          targets_matched: number
+          targets_requested: number
           trigger: string
         }
         Insert: {
           created_at?: string
           error?: string | null
           finished_at?: string | null
+          household_id?: string | null
           id?: string
+          prices_found?: number
           products_scanned?: number
           retailer_id?: string | null
+          retailer_location_id?: string | null
+          source?: string
           started_at?: string | null
           status?: string
+          targets_matched?: number
+          targets_requested?: number
           trigger?: string
         }
         Update: {
           created_at?: string
           error?: string | null
           finished_at?: string | null
+          household_id?: string | null
           id?: string
+          prices_found?: number
           products_scanned?: number
           retailer_id?: string | null
+          retailer_location_id?: string | null
+          source?: string
           started_at?: string | null
           status?: string
+          targets_matched?: number
+          targets_requested?: number
           trigger?: string
         }
         Relationships: [
