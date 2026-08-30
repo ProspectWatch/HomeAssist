@@ -13,17 +13,20 @@ import type { HomeStats } from "@/lib/data/home";
 import type { Deal } from "@/lib/data/deals";
 import type { WatchItem } from "@/lib/data/watch";
 import type { DepartmentSummary } from "@/lib/data/departments";
+import type { ShoppingPlanResult } from "@/lib/shopping/types";
 
 export function HomeView({
   stats,
   deals,
   watching,
   departments,
+  shoppingPlan,
 }: {
   stats: HomeStats;
   deals: Deal[];
   watching: WatchItem[];
   departments: DepartmentSummary[];
+  shoppingPlan: ShoppingPlanResult;
 }) {
   const { openAddWatch } = useAppShell();
   const showToast = useToast();
@@ -99,10 +102,7 @@ export function HomeView({
         <div className="mb-2.5 flex items-baseline justify-between">
           <div className="font-serif text-[15px]">This Week&apos;s Shopping Plan</div>
         </div>
-        <p className="text-[12px] text-white/70">
-          Add items to your grocery list and we&apos;ll group them by the stores you shop at — once the
-          scan pipeline is running, we&apos;ll also flag which trips are worth the drive.
-        </p>
+        <p className="text-[12px] text-white/70">{shoppingPlan.summary}</p>
       </div>
 
       <SectionHeader title="Deals For You" href="/shop/deals" />

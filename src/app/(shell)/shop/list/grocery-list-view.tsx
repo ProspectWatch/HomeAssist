@@ -139,6 +139,9 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
                           {item.name}
                         </div>
                         {item.qty ? <div className="text-[11px] text-muted">{item.qty}</div> : null}
+                        {item.preferredMatchLabel ? (
+                          <div className="mt-0.5 text-[10.5px] text-oak">Preferred: {item.preferredMatchLabel}</div>
+                        ) : null}
                       </div>
                       {item.has_deal ? (
                         <span className="rounded-[6px] bg-green px-2 py-[3px] text-[10px] font-semibold text-white">
