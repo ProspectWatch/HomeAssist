@@ -12,6 +12,12 @@ import {
 /**
  * Receipt extraction using Claude's vision capability.
  *
+ * NOT WIRED INTO PRODUCTION. The active provider is
+ * `extractors/openai.ts` (see getExtractor() in lib/data/receipt-pipeline.ts).
+ * This implementation is retained as a working second provider so the
+ * ReceiptExtractor abstraction stays honest — an interface with only one
+ * implementation is an assumption, not a seam.
+ *
  * Runs server-side only. The API key is read from the environment and never
  * reaches the browser (§20, §23).
  *
