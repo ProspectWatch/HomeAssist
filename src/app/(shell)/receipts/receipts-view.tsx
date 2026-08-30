@@ -14,7 +14,10 @@ import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { Receipt } from "@/lib/data/receipts";
 import type { ReceiptStatus } from "@/lib/receipts/types";
-import { uploadReceipt } from "./actions";
+import { createClient } from "@/lib/supabase/client";
+import { shrinkReceiptImage } from "@/lib/receipts/downscale";
+import { validateReceiptUpload } from "@/lib/receipts/upload";
+import { ingestUploadedReceipt, prepareReceiptUpload } from "./actions";
 
 const STATUS_LABEL: Record<ReceiptStatus, string> = {
   UPLOADED: "Saved — not read yet",
@@ -55,11 +58,47 @@ export function ReceiptsView({
     (r.retailer_name ?? "").toLowerCase().includes(search.toLowerCase()),
   );
 
-  function submitFile(file: File) {
-    const formData = new FormData();
-    formData.set("file", file);
+  /**
+   * Photo -> private Storage -> server.
+   *
+   * The image goes straight to the bucket under this signed-in session; only
+   * the object path crosses a Server Action. Sending the bytes through the
+   * action is what produced the 413 — a Vercel Function refuses any body over
+   * 4.5 MB, and receipt photos are routinely larger.
+   */
+  function submitFile(original: File) {
     startTransition(async () => {
-      const res = await uploadReceipt(formData);
+      const file = await shrinkReceiptImage(original);
+
+      const check = validateReceiptUpload({ size: file.size, mediaType: file.type });
+      if (!check.ok) {
+        showToast(check.message);
+        return;
+      }
+
+      const target = await prepareReceiptUpload({
+        filename: file.name || "receipt.jpg",
+        mediaType: file.type,
+        size: file.size,
+      });
+      if (!target.ok) {
+        showToast(target.message);
+        return;
+      }
+
+      const { error: storageError } = await createClient()
+        .storage.from("receipts")
+        .upload(target.storagePath, file, { contentType: file.type, upsert: false });
+      if (storageError) {
+        showToast("Couldn't upload that photo — check your connection and try again.");
+        return;
+      }
+
+      const res = await ingestUploadedReceipt({
+        storagePath: target.storagePath,
+        mediaType: file.type,
+        filename: file.name || "receipt.jpg",
+      });
       if (!res.ok) {
         showToast(res.message);
         return;

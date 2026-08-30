@@ -4,6 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createOpenAIReceiptExtractor } from "@/lib/receipts/extractors/openai";
 import { aliasKey, isProductLine, matchReceiptLine } from "@/lib/receipts/matching";
 import { findDuplicateReceipt, hashDocument, type ExistingReceipt } from "@/lib/receipts/duplicate";
+import {
+  buildReceiptStoragePath,
+  storagePathBelongsToHousehold,
+  validateReceiptUpload,
+} from "@/lib/receipts/upload";
 import { ReceiptExtractionError, type ReceiptExtractor } from "@/lib/receipts/types";
 import type { MatchableCatalogProduct } from "@/lib/retailers/matching";
 
@@ -73,19 +78,61 @@ export type UploadOutcome =
   | { ok: false; message: string };
 
 /**
- * Stores the file, then extracts and matches it.
+ * Issues the one object path the browser is allowed to upload to.
+ *
+ * Server-issued on purpose: the first path segment is what the storage RLS
+ * policy checks, so letting the browser choose it would make household
+ * isolation a client-side promise.
+ */
+export function receiptUploadTarget(householdId: string, filename: string): string {
+  return buildReceiptStoragePath(householdId, filename, crypto.randomUUID());
+}
+
+/**
+ * Reads an already-uploaded receipt, then extracts and matches it.
+ *
+ * The bytes arrive in private Storage, not through this call: a phone photo
+ * exceeds the 4.5 MB body limit a Vercel Function will accept, so the browser
+ * uploads directly to the bucket under its own session and hands back only the
+ * path. That makes `storagePath` untrusted input, and it is checked against the
+ * authenticated household here before anything is read.
  *
  * A receipt always lands in REVIEW_REQUIRED (or FAILED) — never VERIFIED —
  * because OCR completing is not the same as the household agreeing (§3).
  */
-export async function ingestReceipt(
+export async function ingestStoredReceipt(
   householdId: string,
-  file: { bytes: Uint8Array; mediaType: string; filename: string },
+  upload: { storagePath: string; mediaType: string; filename: string },
 ): Promise<UploadOutcome> {
   const supabase = await createClient();
-  const documentHash = await hashDocument(file.bytes);
 
-  // Duplicate check on the file itself, before anything is stored (§22).
+  if (!storagePathBelongsToHousehold(upload.storagePath, householdId)) {
+    return { ok: false, message: "That upload doesn't belong to this household." };
+  }
+
+  const { data: blob, error: downloadError } = await supabase.storage
+    .from("receipts")
+    .download(upload.storagePath);
+  if (downloadError || !blob) {
+    return { ok: false, message: "Couldn't read the uploaded photo — try again." };
+  }
+
+  const mediaType = blob.type || upload.mediaType;
+
+  // Re-validated against the real stored object, not the browser's claim about
+  // it. The client checks first so the message is friendly; this is what makes
+  // the limit true.
+  const check = validateReceiptUpload({ size: blob.size, mediaType });
+  if (!check.ok) {
+    await supabase.storage.from("receipts").remove([upload.storagePath]);
+    return { ok: false, message: check.message };
+  }
+
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const file = { bytes, mediaType, filename: upload.filename || "receipt.jpg" };
+  const documentHash = await hashDocument(bytes);
+
+  // Duplicate check on the file itself (§22).
   const { data: existingRows } = await supabase
     .from("receipts")
     .select("id, document_hash, purchased_at, total_cents, transaction_ref, retailer:retailers(name)")
@@ -113,22 +160,18 @@ export async function ingestReceipt(
     existing,
   );
   if (exactDuplicate?.kind === "EXACT") {
+    // The object is already in the bucket; drop it rather than leave an orphan
+    // that no receipt row points at.
+    await supabase.storage.from("receipts").remove([upload.storagePath]);
     return { ok: false, message: exactDuplicate.reason };
   }
-
-  // Household-scoped storage path — the RLS policy keys off this first segment.
-  const storagePath = `${householdId}/${crypto.randomUUID()}-${file.filename}`;
-  const { error: uploadError } = await supabase.storage
-    .from("receipts")
-    .upload(storagePath, file.bytes, { contentType: file.mediaType, upsert: false });
-  if (uploadError) return { ok: false, message: uploadError.message };
 
   const { data: inserted, error: insertError } = await supabase
     .from("receipts")
     .insert({
       household_id: householdId,
       status: "PROCESSING",
-      storage_path: storagePath,
+      storage_path: upload.storagePath,
       document_hash: documentHash,
     })
     .select("id")
