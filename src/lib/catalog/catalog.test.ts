@@ -76,7 +76,9 @@ describe("catalogue taxonomy", () => {
 
   it("keeps every subcategory the seeded library already uses", () => {
     // These are live FK targets — dropping one would orphan real products.
-    expect(subcategoriesFor("Produce")).toEqual(["Leafy Greens", "Vegetables", "Fruit"]);
+    for (const existing of ["Leafy Greens", "Vegetables", "Fruit"]) {
+      expect(subcategoriesFor("Produce")).toContain(existing);
+    }
     expect(subcategoriesFor("Dairy & Eggs")).toContain("Milk");
     expect(subcategoriesFor("Frozen")).toContain("Frozen Dessert");
     expect(subcategoriesFor("Pantry")).toContain("Soup & Broth");

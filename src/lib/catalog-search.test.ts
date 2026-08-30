@@ -33,9 +33,12 @@ describe("searchCatalog", () => {
     product({ id: "almond-milk", display_name: "Earth's Own Original Almond Milk", brand: "Earth's Own", search_aliases: ["almond milk"] }),
   ];
 
-  it("matches on a substring of the alias/name (plural tolerant), alphabetically tied", () => {
+  // Ties break toward the shorter, more general name — at catalogue scale a
+  // bare category query is reaching for the canonical concept, not whatever
+  // happens to sort first alphabetically.
+  it("matches on a substring of the alias/name (plural tolerant), shortest first", () => {
     const results = searchCatalog(products, "pep");
-    expect(results.map((r) => r.id)).toEqual(["green-bell-pepper", "red-bell-pepper"]);
+    expect(results.map((r) => r.id)).toEqual(["red-bell-pepper", "green-bell-pepper"]);
   });
 
   it("finds eggs by the singular query", () => {
