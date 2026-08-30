@@ -3,10 +3,33 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback"];
 
+/**
+ * Builds a redirect that carries every cookie the session refresh just wrote.
+ *
+ * This is not a nicety. `supabase.auth.getUser()` rotates the refresh token:
+ * the moment a new one is issued the old one is revoked server-side. The
+ * rotated tokens land on `carrying` via the `setAll` callback below. A bare
+ * `NextResponse.redirect()` is a brand-new response with no cookies on it, so
+ * returning one throws the rotated tokens away and leaves the browser holding
+ * a refresh token the server has already revoked. The next request then can't
+ * refresh, `getUser()` returns null, and the person is bounced to /login to
+ * ask for another magic link — even though their session never expired.
+ */
+function redirectCarryingSession(to: URL, carrying: NextResponse): NextResponse {
+  const redirect = NextResponse.redirect(to);
+  for (const cookie of carrying.cookies.getAll()) {
+    redirect.cookies.set(cookie);
+  }
+  return redirect;
+}
+
 // Refreshes the Supabase auth session on every request so Server Components
 // always see a valid (non-expired) session without each page re-implementing
 // this, then gates routes: signed-out users are sent to /login, and signed-in
 // users with no household yet are sent to /onboarding.
+//
+// Cookies are the only place the session lives, so every path out of this
+// function must return a response that carries whatever `setAll` wrote.
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -42,13 +65,16 @@ export async function proxy(request: NextRequest) {
     if (isPublicPath) return response;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    return NextResponse.redirect(url);
+    // Carries the cookie deletions Supabase writes when it finds the stored
+    // session unusable, so a genuinely dead session is cleared rather than
+    // re-read and re-rejected on every subsequent request.
+    return redirectCarryingSession(url, response);
   }
 
   if (pathname.startsWith("/login")) {
     const url = request.nextUrl.clone();
     url.pathname = "/home";
-    return NextResponse.redirect(url);
+    return redirectCarryingSession(url, response);
   }
 
   if (pathname.startsWith("/onboarding") || isPublicPath) {
@@ -65,7 +91,7 @@ export async function proxy(request: NextRequest) {
   if (!membership) {
     const url = request.nextUrl.clone();
     url.pathname = "/onboarding";
-    return NextResponse.redirect(url);
+    return redirectCarryingSession(url, response);
   }
 
   return response;
