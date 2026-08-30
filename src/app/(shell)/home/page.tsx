@@ -3,16 +3,20 @@ import { getHomeStats } from "@/lib/data/home";
 import { getDeals } from "@/lib/data/deals";
 import { getWatchItems } from "@/lib/data/watch";
 import { getDepartmentsWithCounts } from "@/lib/data/departments";
+import { getHomeShoppingPlan } from "@/lib/data/shopping-plan";
 import { HomeView } from "./home-view";
 
 export default async function HomePage() {
   const householdId = await getCurrentHouseholdId();
-  const [stats, deals, watching, departments] = await Promise.all([
+  const [stats, deals, watching, departments, shoppingPlan] = await Promise.all([
     getHomeStats(householdId),
     getDeals(householdId),
     getWatchItems(householdId),
     getDepartmentsWithCounts(householdId),
+    getHomeShoppingPlan(householdId),
   ]);
 
-  return <HomeView stats={stats} deals={deals} watching={watching} departments={departments} />;
+  return (
+    <HomeView stats={stats} deals={deals} watching={watching} departments={departments} shoppingPlan={shoppingPlan} />
+  );
 }
