@@ -1,3 +1,4 @@
+import { CATALOG_CATEGORIES } from "@/lib/catalog/categories";
 import type { PantryProduct } from "@/lib/data/pantry";
 
 /**
@@ -41,16 +42,14 @@ export function areaForLocation(location: string | null): string {
   return LOCATION_TO_AREA[location] ?? location;
 }
 
-/** Kitchen-side categories, in the order §6 asks them to be worked through. */
-const KITCHEN_CATEGORY_ORDER = [
-  "Produce",
-  "Meat & Seafood",
-  "Dairy & Eggs",
-  "Deli & Prepared",
-  "Pantry",
-  "Frozen",
-  "Drinks",
-];
+/**
+ * Kitchen-side categories, in the order §6 asks them to be worked through.
+ * Derived from the canonical taxonomy so a newly added kitchen category joins
+ * the walk automatically instead of falling to the end unranked.
+ */
+const KITCHEN_CATEGORY_ORDER = CATALOG_CATEGORIES.filter((c) => c.kitchenOrder !== null)
+  .sort((a, b) => a.kitchenOrder! - b.kitchenOrder!)
+  .map((c) => c.name);
 
 function categoryRank(category: string | null): number {
   if (!category) return KITCHEN_CATEGORY_ORDER.length;

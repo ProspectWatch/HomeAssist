@@ -1,11 +1,17 @@
 import Image from "next/image";
 import {
   Apple,
+  Baby,
   Beef,
+  Candy,
+  Cookie,
+  Croissant,
   CupSoda,
   Egg,
   Package,
+  PawPrint,
   Snowflake,
+  Sparkles,
   SprayCan,
   Wheat,
   type LucideIcon,
@@ -27,6 +33,12 @@ const CATEGORY_ICONS: Record<string, LucideIcon> = {
   Drinks: CupSoda,
   Household: SprayCan,
   "Deli & Prepared": Package,
+  Bakery: Croissant,
+  Snacks: Cookie,
+  Confectionery: Candy,
+  "Health & Beauty": Sparkles,
+  "Baby & Kids": Baby,
+  Pet: PawPrint,
 };
 
 /**

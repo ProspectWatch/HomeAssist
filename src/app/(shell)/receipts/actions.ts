@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
 import { ingestStoredReceipt, receiptUploadTarget, verifyReceipt } from "@/lib/data/receipt-pipeline";
 import { validateReceiptUpload } from "@/lib/receipts/upload";
+import {
+  buildNewCatalogProduct,
+  validateNewProduct,
+  type NewCatalogProductInput,
+} from "@/lib/catalog/new-product";
 import { addHouseholdNeed } from "@/app/(shell)/shop/pantry/actions";
 
 export type UploadResult = ActionResult & { receiptId?: string; duplicateWarning?: string | null };
@@ -85,6 +90,72 @@ export async function updateReceiptLine(
     const { error } = await supabase.from("receipt_items").update(patch).eq("id", lineId).eq("receipt_id", receiptId);
     if (error) return { ok: false, message: error.message };
     revalidatePath(`/receipts/${receiptId}`);
+    return { ok: true };
+  });
+}
+
+/**
+ * Creates a catalogue product from an unmatched receipt line, then maps the
+ * line to it.
+ *
+ * This is how the catalogue grows: from something the household actually
+ * bought, named by the person who bought it. The raw receipt text is kept as
+ * a search alias, so the same abbreviation resolves itself on the next shop
+ * rather than coming back as UNMATCHED forever.
+ *
+ * Nothing is invented here — the receipt supplies the price and the raw text,
+ * the person supplies the name and category.
+ */
+export async function createProductForReceiptLine(
+  receiptId: string,
+  lineId: string,
+  input: NewCatalogProductInput,
+): Promise<ActionResult> {
+  const check = validateNewProduct(input);
+  if (!check.ok) return check;
+
+  return runHouseholdAction(async (supabase, householdId) => {
+    // The line has to belong to a receipt in this household before anything
+    // is written — the ids arrive from the browser.
+    const { data: line } = await supabase
+      .from("receipt_items")
+      .select("id, raw_description, receipt:receipts!inner(id, household_id)")
+      .eq("id", lineId)
+      .eq("receipt_id", receiptId)
+      .maybeSingle();
+    const owner = (line as { receipt?: { household_id: string } } | null)?.receipt;
+    if (!line || owner?.household_id !== householdId) {
+      return { ok: false, message: "That receipt line isn't yours." };
+    }
+
+    const rawDescription =
+      input.rawDescription ?? (line as { raw_description: string | null }).raw_description ?? null;
+
+    // Slug collisions are rare but real ("Rainbow Strips" twice); read the
+    // ids that could collide rather than the whole catalogue.
+    const { data: takenRows } = await supabase.from("catalog_products").select("id");
+    const taken = ((takenRows ?? []) as { id: string }[]).map((r) => r.id);
+
+    const product = buildNewCatalogProduct({ ...input, rawDescription }, taken);
+
+    const { error: insertError } = await supabase.from("catalog_products").insert(product);
+    if (insertError) return { ok: false, message: "Couldn't add that product to the catalogue." };
+
+    const { error: linkError } = await supabase
+      .from("receipt_items")
+      .update({
+        catalog_product_id: product.id,
+        match_status: "MATCHED",
+        match_confidence: 1,
+        match_method: "created_from_receipt",
+        confirmed_by_user: true,
+      })
+      .eq("id", lineId)
+      .eq("receipt_id", receiptId);
+    if (linkError) return { ok: false, message: linkError.message };
+
+    revalidatePath(`/receipts/${receiptId}`);
+    revalidatePath("/shop/browse");
     return { ok: true };
   });
 }

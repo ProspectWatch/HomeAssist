@@ -12,7 +12,8 @@ import { useToast } from "@/components/shell/toast-context";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { ReceiptDetail, ReceiptLine } from "@/lib/data/receipts";
-import { confirmReceipt, updateReceiptHeader, updateReceiptLine } from "../actions";
+import { CATALOG_CATEGORIES, subcategoriesFor } from "@/lib/catalog/categories";
+import { confirmReceipt, createProductForReceiptLine, updateReceiptHeader, updateReceiptLine } from "../actions";
 
 /** Lines that need a human decision before the receipt can be trusted. */
 function needsAttention(line: ReceiptLine): boolean {
@@ -24,6 +25,7 @@ function needsAttention(line: ReceiptLine): boolean {
 export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
   const [pending, startTransition] = React.useTransition();
   const [pickerFor, setPickerFor] = React.useState<string | null>(null);
+  const [newProductFor, setNewProductFor] = React.useState<{ lineId: string; name: string } | null>(null);
   const [showAll, setShowAll] = React.useState(false);
   const [date, setDate] = React.useState(receipt.purchased_at ?? "");
   const router = useRouter();
@@ -40,6 +42,23 @@ export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
       const res = await updateReceiptLine(receipt.id, lineId, update);
       if (!res.ok) showToast(res.message);
       else router.refresh();
+    });
+  }
+
+  function addProduct(lineId: string, name: string, category: string, subcategory: string) {
+    startTransition(async () => {
+      const res = await createProductForReceiptLine(receipt.id, lineId, {
+        displayName: name,
+        category,
+        subcategory: subcategory || null,
+      });
+      if (!res.ok) {
+        showToast(res.message);
+        return;
+      }
+      setNewProductFor(null);
+      showToast(`Added ${name} to the catalogue`);
+      router.refresh();
     });
   }
 
@@ -218,9 +237,135 @@ export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
             if (pickerFor) setLine(pickerFor, { catalogProductId: product.id });
             setPickerFor(null);
           }}
-          onCustom={() => showToast("Pick a catalogue product so the price can join its history.")}
+          onCustom={(name) => {
+            if (pickerFor) setNewProductFor({ lineId: pickerFor, name });
+            setPickerFor(null);
+          }}
         />
       </BottomSheet>
+
+      <BottomSheet open={newProductFor !== null} onClose={() => setNewProductFor(null)}>
+        {newProductFor ? (
+          <NewProductForm
+            initialName={newProductFor.name}
+            rawDescription={
+              receipt.lines.find((l) => l.id === newProductFor.lineId)?.raw_description ?? null
+            }
+            pending={pending}
+            onCancel={() => setNewProductFor(null)}
+            onSave={(name, category, subcategory) =>
+              addProduct(newProductFor.lineId, name, category, subcategory)
+            }
+          />
+        ) : null}
+      </BottomSheet>
+    </div>
+  );
+}
+
+/**
+ * Adds a product the catalogue doesn't have yet.
+ *
+ * Deliberately asks a person to name it: the receipt only ever prints an
+ * abbreviation ("LAYS OLD FSH BBQ"), and guessing what that expands to would
+ * put an invented product name into shared household data. The raw text is
+ * shown as evidence and kept as a search alias, so the next receipt matches
+ * this product without asking again.
+ */
+function NewProductForm({
+  initialName,
+  rawDescription,
+  pending,
+  onCancel,
+  onSave,
+}: {
+  initialName: string;
+  rawDescription: string | null;
+  pending: boolean;
+  onCancel: () => void;
+  onSave: (name: string, category: string, subcategory: string) => void;
+}) {
+  const [name, setName] = React.useState(initialName);
+  const [category, setCategory] = React.useState("");
+  const [subcategory, setSubcategory] = React.useState("");
+  const subcategories = subcategoriesFor(category);
+
+  return (
+    <div>
+      <div className="mb-1 text-sm font-semibold">Add this as a new product</div>
+      {rawDescription ? (
+        <p className="mb-3 text-[12px] text-muted">
+          The receipt reads <code className="text-ink">{rawDescription}</code>. Name it as you&apos;d
+          recognise it — we&apos;ll remember this shorthand next time.
+        </p>
+      ) : null}
+
+      <label htmlFor="np-name" className="mb-1 block text-[12px] font-semibold text-ink">
+        Product name
+      </label>
+      <Input
+        id="np-name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        placeholder="e.g. Lay's Old Fashioned BBQ Chips"
+        className="mb-3"
+        autoFocus
+      />
+
+      <label htmlFor="np-category" className="mb-1 block text-[12px] font-semibold text-ink">
+        Category
+      </label>
+      <select
+        id="np-category"
+        value={category}
+        onChange={(e) => {
+          setCategory(e.target.value);
+          setSubcategory("");
+        }}
+        className="mb-3 min-h-11 w-full rounded-(--radius-sm) border border-line bg-white px-3 text-[14px] text-ink"
+      >
+        <option value="">Choose a category…</option>
+        {CATALOG_CATEGORIES.map((c) => (
+          <option key={c.name} value={c.name}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+
+      {subcategories.length > 0 ? (
+        <>
+          <label htmlFor="np-subcategory" className="mb-1 block text-[12px] font-semibold text-ink">
+            Aisle <span className="font-normal text-muted2">(optional)</span>
+          </label>
+          <select
+            id="np-subcategory"
+            value={subcategory}
+            onChange={(e) => setSubcategory(e.target.value)}
+            className="mb-3 min-h-11 w-full rounded-(--radius-sm) border border-line bg-white px-3 text-[14px] text-ink"
+          >
+            <option value="">Not sure</option>
+            {subcategories.map((sub) => (
+              <option key={sub} value={sub}>
+                {sub}
+              </option>
+            ))}
+          </select>
+        </>
+      ) : null}
+
+      <div className="mt-1 flex gap-2">
+        <Button
+          size="lg"
+          className="flex-1"
+          disabled={pending || name.trim().length < 2 || !category}
+          onClick={() => onSave(name.trim(), category, subcategory)}
+        >
+          Add to catalogue
+        </Button>
+        <Button size="lg" variant="ghost" disabled={pending} onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
     </div>
   );
 }
