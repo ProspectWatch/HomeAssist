@@ -21,25 +21,65 @@ function haystack(product: CatalogProduct): string {
 
 /**
  * Instant client-side ranking over the cached catalogue (step 3/11): no
- * network round-trip per keystroke. Prefix matches on the name rank
- * highest, then any word starting with the query, then a plain substring.
+ * network round-trip per keystroke.
+ *
+ * The tiers matter more than they look at catalogue scale. With ~1,700
+ * products a one-word query like "chips" matches two dozen names equally on a
+ * plain word-prefix test, and the canonical concept ("Potato Chips") loses to
+ * whatever sorts first alphabetically ("All Dressed Chips"). So an exact name
+ * or alias wins outright, a head-noun match ("… Chips") outranks a match
+ * buried mid-name, and ties break toward the shorter, more general name —
+ * which is the one a person typing a bare category term is reaching for.
  */
+const SCORE = {
+  exactName: 120,
+  namePrefix: 100,
+  /** An alias the household or catalogue records verbatim, e.g. "pop" -> Cola. */
+  exactAlias: 95,
+  /** The query is the head noun: "chips" in "Potato Chips". */
+  headNoun: 90,
+  nameWordPrefix: 80,
+  aliasWordPrefix: 60,
+  substring: 40,
+} as const;
+
+function scoreProduct(product: CatalogProduct, query: string): number {
+  const name = normalizeQuery(product.display_name);
+  if (name === query) return SCORE.exactName;
+
+  const aliases = product.search_aliases.map(normalizeQuery);
+  if (aliases.includes(query)) return SCORE.exactAlias;
+  if (name.startsWith(query)) return SCORE.namePrefix;
+  if (name === query || name.endsWith(` ${query}`)) return SCORE.headNoun;
+  if (name.split(" ").some((word) => word.startsWith(query))) return SCORE.nameWordPrefix;
+
+  const hay = haystack(product);
+  if (hay.split(" ").some((word) => word.startsWith(query))) return SCORE.aliasWordPrefix;
+  if (hay.includes(query)) return SCORE.substring;
+  return 0;
+}
+
 export function searchCatalog(products: CatalogProduct[], rawQuery: string, limit = 20): CatalogProduct[] {
   const query = normalizeQuery(rawQuery);
   if (!query) return [];
 
   const scored: { product: CatalogProduct; score: number }[] = [];
   for (const product of products) {
-    const name = normalizeQuery(product.display_name);
-    const hay = haystack(product);
-    let score = 0;
-    if (name.startsWith(query)) score = 100;
-    else if (name.split(" ").some((word) => word.startsWith(query))) score = 80;
-    else if (hay.split(" ").some((word) => word.startsWith(query))) score = 60;
-    else if (hay.includes(query)) score = 40;
+    const score = scoreProduct(product, query);
     if (score > 0) scored.push({ product, score });
   }
 
-  scored.sort((a, b) => b.score - a.score || a.product.display_name.localeCompare(b.product.display_name));
+  scored.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    // Fewer words, then shorter: "Potato Chips" ahead of "All Dressed Chips".
+    const aWords = a.product.display_name.split(/\s+/).length;
+    const bWords = b.product.display_name.split(/\s+/).length;
+    if (aWords !== bWords) return aWords - bWords;
+    if (a.product.display_name.length !== b.product.display_name.length) {
+      return a.product.display_name.length - b.product.display_name.length;
+    }
+    return a.product.display_name.localeCompare(b.product.display_name);
+  });
+
   return scored.slice(0, limit).map((s) => s.product);
 }

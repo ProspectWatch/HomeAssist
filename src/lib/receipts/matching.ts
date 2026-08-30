@@ -33,36 +33,59 @@ export function aliasKey(rawDescription: string): string {
   return normalizeName(rawDescription);
 }
 
+/** Letters a receipt abbreviation routinely drops. */
+const DROPPABLE = /[aeiouwy]/g;
+
 /**
- * True when `abbrev` reads like a truncation of `full`.
- * "cnstga" -> "conestoga": every letter of the abbreviation appears in order
- * in the full word, and it starts with the same letter.
+ * True when `abbrev` reads like a receipt's contraction of `full`.
+ *
+ * Deliberately strict. A plain subsequence test is far too permissive — every
+ * letter of "chips" appears in order inside "chickpeas", and "plu" inside
+ * "plums" — which at catalogue scale turns a snack into a legume and a price
+ * lookup code into fruit. A receipt shortens a word one of two ways:
+ *   truncation      "choc"   -> "chocolate"
+ *   dropped vowels  "cnstga" -> "conestoga",  "brn" -> "brown"
+ * so those are the only two things accepted, and the consonant skeletons must
+ * line up from the start.
  */
 function isAbbreviationOf(abbrev: string, full: string): boolean {
-  if (abbrev.length < 3 || abbrev.length > full.length) return false;
+  if (abbrev.length < 3 || abbrev.length >= full.length) return false;
   if (abbrev[0] !== full[0]) return false;
-  let i = 0;
-  for (const ch of full) {
-    if (ch === abbrev[i]) i++;
-    if (i === abbrev.length) return true;
-  }
-  return false;
+  // Truncation. Four characters, so "plu" can't claim "plums".
+  if (abbrev.length >= 4 && full.startsWith(abbrev)) return true;
+
+  const abbrevSkeleton = abbrev.replace(DROPPABLE, "");
+  const fullSkeleton = full.replace(DROPPABLE, "");
+  if (abbrevSkeleton.length < 2) return false;
+  return fullSkeleton.startsWith(abbrevSkeleton);
 }
 
-/** Fraction of catalogue tokens that the receipt text plausibly covers. */
+/**
+ * How well a candidate explains a receipt line, both ways round.
+ *
+ * Candidate coverage alone rewards short names unfairly: a one-word product
+ * scores 1.0 off a single stray token, so "XQZ9 PLU 4011 MISC" would resolve
+ * confidently to a fruit. The geometric mean with raw coverage requires the
+ * candidate to account for most of what is actually printed on the line.
+ */
 function abbreviationCoverage(rawDescription: string, candidateName: string): number {
   const rawTokens = tokenize(rawDescription);
   const nameTokens = tokenize(candidateName);
   if (nameTokens.length === 0 || rawTokens.length === 0) return 0;
 
-  let covered = 0;
+  const matches = (rawToken: string, nameToken: string) =>
+    rawToken === nameToken || isAbbreviationOf(rawToken, nameToken);
+
+  let nameCovered = 0;
   for (const nameToken of nameTokens) {
-    const hit = rawTokens.some(
-      (rawToken) => rawToken === nameToken || isAbbreviationOf(rawToken, nameToken),
-    );
-    if (hit) covered++;
+    if (rawTokens.some((rawToken) => matches(rawToken, nameToken))) nameCovered++;
   }
-  return covered / nameTokens.length;
+  let rawCovered = 0;
+  for (const rawToken of rawTokens) {
+    if (nameTokens.some((nameToken) => matches(rawToken, nameToken))) rawCovered++;
+  }
+
+  return Math.sqrt((nameCovered / nameTokens.length) * (rawCovered / rawTokens.length));
 }
 
 export const RECEIPT_MATCH_THRESHOLDS = {
