@@ -8,6 +8,13 @@ import { isBrandRigidity, type RegularBuy } from "@/lib/household/regular-buys";
 export type CatalogProduct = {
   id: string;
   display_name: string;
+  /**
+   * True for one of the household's own branded products, folded into the same
+   * index. `id` is still the catalogue id it maps to, so every caller that
+   * writes `product.id` as a catalog_product_id keeps working — the difference
+   * is only the name, brand and photo, which is the part a person recognises.
+   */
+  isHouseholdProduct?: boolean;
   brand: string | null;
   category: string;
   subcategory: string | null;
@@ -315,6 +322,58 @@ export async function getRegularBuyIds(householdId: string | null): Promise<stri
       .eq("regular_buy", true);
     if (error || !data) return [];
     return (data as { scope_key: string }[]).map((r) => r.scope_key);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The household's own branded products, shaped for the same search index.
+ *
+ * `id` is deliberately the catalogue id this product maps to, not the
+ * `products` row id: every caller of the picker writes `product.id` into a
+ * catalog_product_id column, and handing them a foreign key from the wrong
+ * table would corrupt the data quietly. A product with no catalogue mapping is
+ * left out rather than given an id that means something else.
+ *
+ * Household-scoped and never cached across households — unlike the shared
+ * catalogue, this is one family's list of what they buy.
+ */
+export async function getHouseholdSearchProducts(householdId: string | null): Promise<CatalogProduct[]> {
+  if (!householdId) return [];
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("products")
+      .select("title, brand, image_url, package_detail, catalog_product_id, catalog_product:catalog_products(category, subcategory, default_unit)")
+      .eq("household_id", householdId)
+      .not("catalog_product_id", "is", null);
+    if (error || !data) return [];
+
+    type Row = {
+      title: string;
+      brand: string | null;
+      image_url: string | null;
+      package_detail: string | null;
+      catalog_product_id: string;
+      catalog_product: { category: string; subcategory: string | null; default_unit: string | null } | null;
+    };
+
+    return (data as unknown as Row[]).map((row) => ({
+      id: row.catalog_product_id,
+      display_name: row.title,
+      brand: row.brand,
+      category: row.catalog_product?.category ?? "Other",
+      subcategory: row.catalog_product?.subcategory ?? null,
+      // The brand is already in display_name; repeating it as an alias would
+      // double-count it in scoring for no gain.
+      search_aliases: [],
+      default_unit: row.package_detail ?? row.catalog_product?.default_unit ?? null,
+      image_url: row.image_url,
+      image_ready: !!row.image_url,
+      preferred_store_hint: null,
+      isHouseholdProduct: true,
+    }));
   } catch {
     return [];
   }
