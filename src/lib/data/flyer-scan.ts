@@ -244,7 +244,12 @@ export async function runFlyerScan(householdId: string, client?: ScanClient): Pr
   const startedAt = new Date().toISOString();
 
   const finish = async (result: FlyerScanResult) => {
-    await supabase.from("scan_jobs").insert({
+    // Discarding this error is what let a missing RLS insert policy hide for a
+    // week: real scans wrote real prices and recorded nothing, so the page kept
+    // saying they had never run. A scan that worked must not be reported as a
+    // failure because its bookkeeping row was refused, but it must not go quiet
+    // either.
+    const { error: jobError } = await supabase.from("scan_jobs").insert({
       household_id: householdId,
       status: result.status === "COMPLETE" ? "COMPLETE" : "FAILED",
       trigger: "manual",
@@ -259,6 +264,14 @@ export async function runFlyerScan(householdId: string, client?: ScanClient): Pr
         result.status === "COMPLETE" ? result.observations.length + result.onlineStored : 0,
       error: result.status === "FAILED" ? `${result.reason}: ${result.message}` : null,
     });
+    if (jobError) {
+      console.error("scan_jobs insert failed", {
+        householdId,
+        status: result.status,
+        code: jobError.code,
+        message: jobError.message,
+      });
+    }
     return result;
   };
 
