@@ -87,3 +87,28 @@ export async function setBrandPreference(
     return { ok: true };
   });
 }
+
+/**
+ * Untag a household-owned SKU as a regular buy.
+ *
+ * setRegularBuy writes to the preference layer, which is right for a
+ * catalogue-backed row and wrong for one of the household's own branded
+ * products: it would leave `products.is_regular_buy` true and quietly create
+ * an unrelated preference row, so the item would still be there after a
+ * refresh.
+ */
+export async function setProductRegularBuy(productId: string, on: boolean): Promise<ActionResult> {
+  if (!productId) return { ok: false, message: "Pick a product first." };
+
+  return runHouseholdAction(async (supabase, householdId) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ is_regular_buy: on })
+      .eq("id", productId)
+      .eq("household_id", householdId);
+    if (error) return { ok: false, message: error.message };
+
+    revalidateAll();
+    return { ok: true };
+  });
+}

@@ -31,6 +31,14 @@ export type RegularBuy = {
   imageReady: boolean;
   preferredBrand: string | null;
   brandRigidity: BrandRigidity;
+  /** Starred in Pantry. Sorts to the top of its category. */
+  isFavourite: boolean;
+  /**
+   * The household's own SKU row, when this buy came from `products` rather
+   * than the preference layer. Untagging one has to update the row it
+   * actually lives on.
+   */
+  productId: string | null;
 };
 
 /**
@@ -76,7 +84,13 @@ export function groupRegularBuys(buys: RegularBuy[]): RegularBuyGroup[] {
   return [...byCategory.entries()]
     .map(([category, items]) => ({
       category,
-      items: items.sort((a, b) => a.displayName.localeCompare(b.displayName)),
+      // Favourites first inside each category: the star is the household
+      // saying "this one matters", and burying it alphabetically ignores that.
+      items: items.sort(
+        (a, b) =>
+          Number(b.isFavourite) - Number(a.isFavourite) ||
+          a.displayName.localeCompare(b.displayName),
+      ),
     }))
     .sort((a, b) => {
       const ai = CATEGORY_ORDER.get(a.category) ?? Number.MAX_SAFE_INTEGER;
