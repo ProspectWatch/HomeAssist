@@ -44,10 +44,17 @@ function formatDeadline(validUntil: string | null): string | null {
 function DealGroupCard({ group }: { group: DealGroup }) {
   const [adding, startAdd] = React.useTransition();
   const [added, setAdded] = React.useState(false);
+  // Which store's offer goes on the list. Defaults to the cheapest because
+  // that is usually the answer, but it is a default and not a decision: the
+  // cheapest shop is often not the one you are driving to, and adding Pork
+  // Back Ribs "at Food Basics" when you are going to Fortinos puts the wrong
+  // price and the wrong store on the list.
+  const [chosenId, setChosenId] = React.useState(group.offers[0]?.id ?? null);
   const showToast = useToast();
   const router = useRouter();
 
   const best = group.offers[0];
+  const chosen = group.offers.find((o) => o.id === chosenId) ?? best;
   const strong = group.verdict?.code === "BEST_EVER" || group.verdict?.code === "GOOD";
 
   function addToList() {
@@ -55,9 +62,9 @@ function DealGroupCard({ group }: { group: DealGroup }) {
       const res = await addDealToList({
         catalogProductId: group.catalogProductId,
         name: group.name,
-        retailerName: best.retailerName,
-        priceCents: best.priceCents,
-        validUntil: best.validUntil,
+        retailerName: chosen.retailerName,
+        priceCents: chosen.priceCents,
+        validUntil: chosen.validUntil,
       });
       if (!res.ok) {
         showToast(res.message);
@@ -88,12 +95,25 @@ function DealGroupCard({ group }: { group: DealGroup }) {
           {group.isRegularBuy ? <Badge variant="oak">Regular</Badge> : null}
         </div>
 
-        {/* One line per store, cheapest first — the comparison is the point. */}
+        {/* One line per store, cheapest first — the comparison is the point —
+            and each one is selectable, because comparing is only half of it. */}
         <div className="flex flex-col gap-1">
           {group.offers.map((offer, i) => {
             const deadline = formatDeadline(offer.validUntil);
+            const picked = offer.id === chosen.id;
             return (
-              <div key={offer.id} className="flex items-baseline justify-between gap-2">
+              <button
+                key={offer.id}
+                type="button"
+                aria-pressed={picked}
+                onClick={() => {
+                  setChosenId(offer.id);
+                  setAdded(false);
+                }}
+                className={`flex items-baseline justify-between gap-2 rounded-(--radius-sm) px-1.5 py-1 text-left ${
+                  picked ? "bg-cream ring-1 ring-oak" : ""
+                }`}
+              >
                 <div className="min-w-0">
                   <span
                     className={`text-[13px] font-bold ${i === 0 ? "text-ink" : "text-muted"}`}
@@ -119,7 +139,7 @@ function DealGroupCard({ group }: { group: DealGroup }) {
                     </span>
                   ) : null}
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -152,7 +172,13 @@ function DealGroupCard({ group }: { group: DealGroup }) {
           className="mt-1 flex w-fit cursor-pointer items-center gap-1 rounded-(--radius-sm) border border-line px-2 py-1 text-[11px] font-semibold text-ink disabled:opacity-60"
         >
           {added ? <Check className="h-3 w-3" aria-hidden="true" /> : <Plus className="h-3 w-3" aria-hidden="true" />}
-          {added ? "On your list" : adding ? "Adding…" : "Add to list"}
+          {/* The store is named on the button so the choice is visible at the
+              moment of committing to it, not two taps earlier. */}
+          {added
+            ? "On your list"
+            : adding
+              ? "Adding…"
+              : `Add to list${chosen.retailerName ? ` — ${chosen.retailerName}` : ""}`}
         </button>
       </div>
     </div>

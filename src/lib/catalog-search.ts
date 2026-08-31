@@ -23,6 +23,21 @@ function haystack(product: CatalogProduct): string {
  * Instant client-side ranking over the cached catalogue (step 3/11): no
  * network round-trip per keystroke.
  *
+ * Two things this has to do that a plain substring filter does not.
+ *
+ * Multi-word queries. "heinz ketchup" is how a person names a product, and
+ * scoring the whole string as one token means it matches nothing at all — the
+ * words are never adjacent in that order in any record. Every word must match
+ * something, and the score is the weakest word's, so a query is only as good
+ * as its worst-matching term.
+ *
+ * The household's own brands first. The shared catalogue is generic by design
+ * and only 12 of its 1,663 products carry a brand, so a brand search against
+ * it is hopeless; the brands this family actually buys live on their own
+ * products. Those are folded into the same index and boosted, which is the
+ * difference between "ketchup" returning their Heinz and returning a wall of
+ * brands they have no interest in.
+ *
  * The tiers matter more than they look at catalogue scale. With ~1,700
  * products a one-word query like "chips" matches two dozen names equally on a
  * plain word-prefix test, and the canonical concept ("Potato Chips") loses to
@@ -43,7 +58,10 @@ const SCORE = {
   substring: 40,
 } as const;
 
-function scoreProduct(product: CatalogProduct, query: string): number {
+/** Lifts a product the household actually buys above the generic equivalent. */
+const HOUSEHOLD_BOOST = 200;
+
+function scoreTerm(product: CatalogProduct, query: string): number {
   const name = normalizeQuery(product.display_name);
   if (name === query) return SCORE.exactName;
 
@@ -59,14 +77,38 @@ function scoreProduct(product: CatalogProduct, query: string): number {
   return 0;
 }
 
+/**
+ * Scores a whole query, which may be several words.
+ *
+ * Every word has to match something — "heinz ketchup" must not return every
+ * ketchup — and the result is the weakest word's score, so one strong term
+ * cannot carry a query whose other term barely matched.
+ */
+export function scoreProduct(product: CatalogProduct, query: string): number {
+  const terms = query.split(" ").filter(Boolean);
+  if (terms.length === 0) return 0;
+
+  let weakest = Infinity;
+  for (const term of terms) {
+    const score = scoreTerm(product, term);
+    if (score === 0) return 0;
+    weakest = Math.min(weakest, score);
+  }
+  // A multi-word query that matches every term is a more specific hit than a
+  // single-word one of the same strength, so it edges ahead.
+  return weakest + (terms.length - 1) * 5;
+}
+
 export function searchCatalog(products: CatalogProduct[], rawQuery: string, limit = 20): CatalogProduct[] {
   const query = normalizeQuery(rawQuery);
   if (!query) return [];
 
   const scored: { product: CatalogProduct; score: number }[] = [];
   for (const product of products) {
-    const score = scoreProduct(product, query);
-    if (score > 0) scored.push({ product, score });
+    const base = scoreProduct(product, query);
+    if (base > 0) {
+      scored.push({ product, score: base + (product.isHouseholdProduct ? HOUSEHOLD_BOOST : 0) });
+    }
   }
 
   scored.sort((a, b) => {
