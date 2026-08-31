@@ -60,11 +60,14 @@ export function LoginView({
             <div className="py-1">
               <p className="text-center text-[14px] font-semibold text-ink">Check your email</p>
               <p className="mt-1.5 text-center text-[13px] text-muted">
-                We sent a sign-in code and a link to {email}.
+                We sent a sign-in code to {email}. Type it below.
               </p>
 
-              {/* The code works no matter where the email opens; the link only
-                  works in this browser. */}
+              {/* The code is the primary path on purpose. The link in the same
+                  email gets fetched by mail-provider security scanners, which
+                  spends the one-time token before the recipient taps it. A
+                  typed code never appears in a URL, so nothing can consume it
+                  in advance. */}
               <form onSubmit={submitCode} className="mt-4 flex flex-col gap-2">
                 <label htmlFor="code" className="text-[12.5px] font-semibold text-ink">
                   Enter the code from the email
@@ -87,7 +90,8 @@ export function LoginView({
               </form>
 
               <p className="mt-3 text-center text-[11.5px] text-muted2">
-                Tapping the link in the email works too — but only if it opens in this browser.
+                There&apos;s a link in the email too. The code is more reliable — some mail providers open
+                links automatically to scan them, which can use the link up before you get to it.
               </p>
               <Button variant="ghost" size="sm" className="mt-2 w-full" onClick={() => setStatus(null)}>
                 Use a different email
@@ -113,10 +117,10 @@ export function LoginView({
                 <p className="text-[12.5px] text-[#b5482f]">{status.message}</p>
               ) : null}
               <Button type="submit" size="lg" className="mt-1 w-full" disabled={pending}>
-                {pending ? "Sending link…" : "Send sign-in link"}
+                {pending ? "Sending code…" : "Email me a sign-in code"}
               </Button>
               <p className="mt-1 text-center text-[11.5px] text-muted2">
-                No password needed — we&apos;ll email you a one-time link.
+                No password needed — we&apos;ll email you a one-time code.
               </p>
             </form>
           )}
