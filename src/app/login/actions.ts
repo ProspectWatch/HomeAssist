@@ -48,12 +48,12 @@ export async function verifyEmailCode(email: string, code: string): Promise<Acti
   const { error } = await supabase.auth.verifyOtp({ email: trimmed, token, type: "email" });
 
   if (error) {
+    // Supabase returns otp_expired for a code that is simply wrong as well as
+    // one that has genuinely timed out, so this can't claim which it was
+    // without saying something untrue.
     return {
       ok: false,
-      message:
-        error.code === "otp_expired"
-          ? "That code has expired — send a new one."
-          : "That code didn't work. Check the digits and try again.",
+      message: "That code didn't work. Check every digit, or send a new one.",
     };
   }
   return { ok: true };
