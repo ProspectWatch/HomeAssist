@@ -17,7 +17,7 @@ import {
   type BrandRigidity,
   type RegularBuy,
 } from "@/lib/household/regular-buys";
-import { setBrandPreference, setRegularBuy } from "./actions";
+import { setBrandPreference, setProductRegularBuy, setRegularBuy } from "./actions";
 
 /**
  * The household's baseline: everything it actually buys, in one place.
@@ -47,7 +47,11 @@ export function RegularBuysView({ buys }: { buys: RegularBuy[] }) {
 
   function untag(buy: RegularBuy) {
     startTransition(async () => {
-      const res = await setRegularBuy(buy.catalogProductId, buy.displayName, false);
+      // Each row is untagged where it actually lives: the household's own SKUs
+      // in `products`, catalogue-backed staples in the preference layer.
+      const res = buy.productId
+        ? await setProductRegularBuy(buy.productId, false)
+        : await setRegularBuy(buy.catalogProductId, buy.displayName, false);
       if (!res.ok) showToast(res.message);
       else {
         showToast(`${buy.displayName} removed from regular buys`);

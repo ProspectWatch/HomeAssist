@@ -18,6 +18,8 @@ function buy(overrides: Partial<RegularBuy> = {}): RegularBuy {
     imageReady: false,
     preferredBrand: null,
     brandRigidity: "FLEXIBLE",
+    isFavourite: false,
+    productId: null,
     ...overrides,
   };
 }
@@ -113,5 +115,32 @@ describe("grouping for display", () => {
 
   it("handles an empty baseline", () => {
     expect(groupRegularBuys([])).toEqual([]);
+  });
+});
+
+describe("groupRegularBuys — favourites", () => {
+  it("puts a favourite above its category, not alphabetically", () => {
+    // The star is the household saying this one matters; burying "Tostitos"
+    // under "Cheetos" because C comes first ignores that.
+    const groups = groupRegularBuys([
+      buy({ catalogProductId: "a", displayName: "Cheetos", category: "Snacks" }),
+      buy({ catalogProductId: "b", displayName: "Tostitos", category: "Snacks", isFavourite: true }),
+    ]);
+    expect(groups[0].items.map((i) => i.displayName)).toEqual(["Tostitos", "Cheetos"]);
+  });
+
+  it("still sorts by name within favourites and within the rest", () => {
+    const groups = groupRegularBuys([
+      buy({ catalogProductId: "a", displayName: "Ruffles", category: "Snacks" }),
+      buy({ catalogProductId: "b", displayName: "Doritos", category: "Snacks", isFavourite: true }),
+      buy({ catalogProductId: "c", displayName: "Cheetos", category: "Snacks" }),
+      buy({ catalogProductId: "d", displayName: "Alcan", category: "Snacks", isFavourite: true }),
+    ]);
+    expect(groups[0].items.map((i) => i.displayName)).toEqual([
+      "Alcan",
+      "Doritos",
+      "Cheetos",
+      "Ruffles",
+    ]);
   });
 });

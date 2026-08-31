@@ -206,31 +206,61 @@ export async function getRegularBuyList(householdId: string | null): Promise<Reg
   if (!householdId) return [];
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("household_product_preferences")
-      .select(
-        "scope_key, label, preferred_brand, brand_rigidity, catalog_product:catalog_products(display_name, category, subcategory, image_url, image_ready)",
-      )
-      .eq("household_id", householdId)
-      .eq("scope_type", "product")
-      .eq("regular_buy", true);
-    if (error || !data) return [];
+    // Both layers, because a regular buy can live in either and this screen
+    // was only ever reading one. The household's branded products -- the 67
+    // photographed off their own shelves -- sit in `products`, so starring
+    // them in Pantry changed nothing here and the screen looked broken.
+    // Pantry has always merged the two; this now matches it.
+    const [prefRes, productRes] = await Promise.all([
+      supabase
+        .from("household_product_preferences")
+        .select(
+          "scope_key, label, preferred_brand, brand_rigidity, is_favourite, catalog_product:catalog_products(display_name, category, subcategory, image_url, image_ready)",
+        )
+        .eq("household_id", householdId)
+        .eq("scope_type", "product")
+        .eq("regular_buy", true),
+      supabase
+        .from("products")
+        .select(
+          "id, title, brand, image_url, is_favourite, catalog_product_id, catalog_product:catalog_products(display_name, category, subcategory, image_url, image_ready)",
+        )
+        .eq("household_id", householdId)
+        .eq("is_regular_buy", true),
+    ]);
+    if (prefRes.error && productRes.error) return [];
+
+    type CatalogJoin = {
+      display_name: string;
+      category: string;
+      subcategory: string | null;
+      image_url: string | null;
+      image_ready: boolean;
+    } | null;
 
     type Row = {
       scope_key: string;
       label: string;
       preferred_brand: string | null;
       brand_rigidity: string;
-      catalog_product: {
-        display_name: string;
-        category: string;
-        subcategory: string | null;
-        image_url: string | null;
-        image_ready: boolean;
-      } | null;
+      is_favourite: boolean;
+      catalog_product: CatalogJoin;
     };
 
-    return (data as unknown as Row[]).map((row) => ({
+    type ProductRow = {
+      id: string;
+      title: string;
+      brand: string | null;
+      image_url: string | null;
+      is_favourite: boolean;
+      catalog_product_id: string | null;
+      catalog_product: CatalogJoin;
+    };
+
+    const prefRows = (prefRes.data ?? []) as unknown as Row[];
+    const productRows = (productRes.data ?? []) as unknown as ProductRow[];
+
+    const fromPreferences: RegularBuy[] = prefRows.map((row) => ({
       catalogProductId: row.scope_key,
       // The catalogue name wins when the row still points at a live product;
       // the stored label is the fallback for anything since removed.
@@ -241,7 +271,32 @@ export async function getRegularBuyList(householdId: string | null): Promise<Reg
       imageReady: row.catalog_product?.image_ready ?? false,
       preferredBrand: row.preferred_brand,
       brandRigidity: isBrandRigidity(row.brand_rigidity) ? row.brand_rigidity : "FLEXIBLE",
+      isFavourite: row.is_favourite ?? false,
+      productId: null,
     }));
+
+    // A preference row is the richer record, so where both layers describe the
+    // same concept the preference wins and the SKU is not listed twice.
+    const covered = new Set(prefRows.map((r) => r.scope_key));
+    const fromProducts: RegularBuy[] = productRows
+      .filter((row) => !(row.catalog_product_id && covered.has(row.catalog_product_id)))
+      .map((row) => ({
+        catalogProductId: row.catalog_product_id ?? "",
+        // Their own title, not the catalogue's: "Doritos Nacho Cheese" is what
+        // they call it, and the whole point of these rows is the brand.
+        displayName: row.title,
+        category: row.catalog_product?.category ?? "Other",
+        subcategory: row.catalog_product?.subcategory ?? null,
+        // Their photograph first, the catalogue's only as a fallback.
+        imageUrl: row.image_url ?? row.catalog_product?.image_url ?? null,
+        imageReady: row.image_url ? true : (row.catalog_product?.image_ready ?? false),
+        preferredBrand: row.brand,
+        brandRigidity: "FLEXIBLE" as const,
+        isFavourite: row.is_favourite ?? false,
+        productId: row.id,
+      }));
+
+    return [...fromPreferences, ...fromProducts];
   } catch {
     return [];
   }
