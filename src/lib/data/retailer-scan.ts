@@ -60,7 +60,7 @@ export async function getScanTargets(
 ): Promise<ScanTarget[]> {
   const supabase = client ?? (await createClient());
 
-  const [listRes, inventoryRes, prefRes, watchRes, catalogRes] = await Promise.all([
+  const [listRes, inventoryRes, prefRes, watchRes, catalogRes, brandRes] = await Promise.all([
     supabase
       .from("grocery_items")
       .select("catalog_product_id")
@@ -83,11 +83,28 @@ export async function getScanTargets(
       .eq("household_id", householdId)
       .eq("status", "watching"),
     supabase.from("catalog_products").select("id, display_name").eq("active", true),
+    // The household's own branded products, so the scan searches "Doritos"
+    // rather than "Corn Chips" wherever this family has named what they buy.
+    supabase
+      .from("products")
+      .select("title, catalog_product_id")
+      .eq("household_id", householdId)
+      .not("catalog_product_id", "is", null),
   ]);
 
   const namesById = new Map<string, string>();
   for (const row of (catalogRes.data ?? []) as { id: string; display_name: string }[]) {
     namesById.set(row.id, row.display_name);
+  }
+
+  // One catalogue concept can back several branded products (two peanut
+  // butters, three gelati). First one wins rather than scanning the concept
+  // repeatedly — the budget is better spent reaching more products.
+  const brandNamesById = new Map<string, string>();
+  for (const row of (brandRes.data ?? []) as { title: string; catalog_product_id: string }[]) {
+    if (!brandNamesById.has(row.catalog_product_id)) {
+      brandNamesById.set(row.catalog_product_id, row.title);
+    }
   }
 
   const inventory = (inventoryRes.data ?? []) as { catalog_product_id: string; status: string }[];
@@ -108,6 +125,7 @@ export async function getScanTargets(
         .filter((id): id is string => !!id),
       recipeCatalogIds: [],
       namesById,
+      brandNamesById,
     },
     limit,
   );

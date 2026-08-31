@@ -49,6 +49,16 @@ export type ScanTargetInputs = {
   recipeCatalogIds: string[];
   /** catalogProductId -> display name, for building the search query. */
   namesById: Map<string, string>;
+  /**
+   * catalogProductId -> the branded product this household actually buys.
+   *
+   * Preferred over the catalogue name when present, because the two find
+   * different things. Searching "Corn Chips" returns whatever a flyer happens
+   * to file under that heading; searching "Doritos" returns the bag on this
+   * family's shelf, at a named price, in a named store. The catalogue name
+   * stays the fallback for everything the household has not named a brand for.
+   */
+  brandNamesById?: Map<string, string>;
 };
 
 /**
@@ -75,7 +85,7 @@ export function buildScanTargets(inputs: ScanTargetInputs, limit = 50): ScanTarg
   for (const [reason, ids] of buckets) {
     for (const id of ids) {
       if (seen.has(id)) continue;
-      const query = inputs.namesById.get(id);
+      const query = inputs.brandNamesById?.get(id) ?? inputs.namesById.get(id);
       if (!query) continue; // never scan for a product we can't name
       seen.add(id);
       targets.push({ catalogProductId: id, query, reason });
