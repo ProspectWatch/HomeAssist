@@ -1,7 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/confirm"];
+// Reachable without a session cookie.
+//
+// /api/cron is here because it authenticates itself with a bearer token the
+// scheduler holds, and it runs when nobody is signed in — which is the whole
+// point of it. Without this it was answering Vercel Cron with a 307 to
+// /login, so the scheduled scan would have quietly never run: no error, no
+// scan_jobs row, just prices that never updated.
+const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/confirm", "/api/cron"];
 
 // Reachable while signed in but not yet in a household — that is exactly who
 // an invite link is for, so it must not be bounced to /onboarding.
