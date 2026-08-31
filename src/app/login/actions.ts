@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getSiteUrl } from "@/lib/site-url";
 import type { ActionResult } from "@/lib/actions/helpers";
+import { MAX_CODE_LENGTH, MIN_CODE_LENGTH } from "@/lib/auth/sign-in-code";
 
 export async function sendMagicLink(email: string): Promise<ActionResult> {
   const trimmed = email.trim();
@@ -24,6 +25,9 @@ export async function sendMagicLink(email: string): Promise<ActionResult> {
 /**
  * Signs in with the six-digit code from the same email.
  *
+ * The code's length is whatever the Supabase project is configured to send
+ * (it is a setting, not a constant), so nothing here assumes six digits.
+ *
  * This is the path that cannot break. The magic link carries a PKCE code that
  * only the browser which requested it can redeem, so tapping it in Mail and
  * landing in a different browser — or in Safari when the request came from the
@@ -35,7 +39,10 @@ export async function verifyEmailCode(email: string, code: string): Promise<Acti
   const trimmed = email.trim();
   const token = code.replace(/\D/g, "");
   if (!trimmed) return { ok: false, message: "Enter your email first." };
-  if (token.length !== 6) return { ok: false, message: "Enter the 6-digit code from the email." };
+  // Length is a Supabase project setting, not a constant — don't assume six.
+  if (token.length < MIN_CODE_LENGTH || token.length > MAX_CODE_LENGTH) {
+    return { ok: false, message: "Enter the code from the email." };
+  }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.verifyOtp({ email: trimmed, token, type: "email" });
