@@ -59,6 +59,8 @@ export type ReceiptLine = {
   catalog_product_id: string | null;
   catalog_product_name: string | null;
   confirmed_by_user: boolean;
+  /** Who this line was for, when the household has said. */
+  person_id: string | null;
 };
 
 export type ReceiptDetail = {
@@ -87,7 +89,7 @@ export async function getReceiptDetail(
     const { data, error } = await supabase
       .from("receipts")
       .select(
-        "id, status, purchased_at, purchased_time, subtotal_cents, tax_cents, total_cents, raw_text, extraction_confidence, extraction_error, retailer:retailers(name), receipt_items(id, raw_description, name, quantity, unit_price_cents, line_total_cents, discount_cents, line_type, match_status, match_confidence, confirmed_by_user, sort_order, catalog_product:catalog_products(display_name))",
+        "id, status, purchased_at, purchased_time, subtotal_cents, tax_cents, total_cents, raw_text, extraction_confidence, extraction_error, retailer:retailers(name), receipt_items(id, raw_description, name, quantity, unit_price_cents, line_total_cents, discount_cents, line_type, match_status, match_confidence, confirmed_by_user, person_id, sort_order, catalog_product:catalog_products(display_name))",
       )
       .eq("id", receiptId)
       .eq("household_id", householdId)
@@ -106,6 +108,7 @@ export async function getReceiptDetail(
       match_status: ReceiptMatchStatus;
       match_confidence: number | null;
       confirmed_by_user: boolean;
+      person_id: string | null;
       sort_order: number;
       catalog_product: { display_name: string } | null;
     };
@@ -152,6 +155,7 @@ export async function getReceiptDetail(
           catalog_product_id: null,
           catalog_product_name: l.catalog_product?.display_name ?? null,
           confirmed_by_user: l.confirmed_by_user,
+          person_id: l.person_id,
         })),
     };
   } catch {

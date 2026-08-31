@@ -1,12 +1,16 @@
 import { notFound } from "next/navigation";
 import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getReceiptDetail } from "@/lib/data/receipts";
+import { getHouseholdPeople } from "@/lib/data/people";
 import { ReceiptReviewView } from "./receipt-review-view";
 
 export default async function ReceiptReviewPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const householdId = await getCurrentHouseholdId();
-  const receipt = await getReceiptDetail(householdId, id);
+  const [receipt, people] = await Promise.all([
+    getReceiptDetail(householdId, id),
+    getHouseholdPeople(householdId),
+  ]);
   if (!receipt) notFound();
-  return <ReceiptReviewView receipt={receipt} />;
+  return <ReceiptReviewView receipt={receipt} people={people} />;
 }
