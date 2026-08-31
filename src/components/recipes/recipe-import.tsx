@@ -17,6 +17,10 @@ import type { ImportedRecipe } from "@/lib/recipes/import-url";
 /**
  * Adding a recipe from a link, a screenshot, or by hand.
  *
+ * Holds a sheet's worth of draft state and never resets it itself — the caller
+ * remounts it with a key when it reopens, which is what `key` is for and what
+ * an effect copying props into state is a worse version of.
+ *
  * Every route ends at the same review step rather than saving straight off.
  * An import is a reading of somebody else's page and can be partial; the
  * ingredient list is exactly the thing worth a glance before it starts
@@ -44,18 +48,6 @@ export function RecipeImport({
   const [slots, setSlots] = React.useState<MealSlot[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
-
-  React.useEffect(() => {
-    if (!open) {
-      setUrl("");
-      setDraft(null);
-      setIngredientText("");
-      setName("");
-      setMinutes("");
-      setServings("");
-      setSlots([]);
-    }
-  }, [open]);
 
   function loadDraft(recipe: ImportedRecipe) {
     setDraft(recipe);

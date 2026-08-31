@@ -4,13 +4,17 @@ import { Card } from "@/components/ui/card";
 import { ChevronRight } from "lucide-react";
 
 const LINKS = [
+  // Family leads: it is the thing that was asked for twice and found neither
+  // time, because it lived inside a page the menu called "Search Settings".
+  { href: "/family", label: "Family" },
+  { href: "/shop/plan", label: "Meal Plan" },
   { href: "/shop/recipes", label: "Recipes" },
   { href: "/stores", label: "Stores" },
   { href: "/receipts", label: "Receipts" },
   { href: "/price-history", label: "Price Book" },
   { href: "/image-credits", label: "Image Credits" },
   { href: "/notifications", label: "Notifications" },
-  { href: "/settings", label: "Search Settings" },
+  { href: "/settings", label: "Settings" },
 ] as const;
 
 export default function MorePage() {

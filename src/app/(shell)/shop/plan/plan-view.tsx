@@ -10,7 +10,6 @@ import { CollapsibleSection, useSectionState } from "@/components/ui/collapsible
 import { useToast } from "@/components/shell/toast-context";
 import { describeScreen } from "@/lib/meals/allergens";
 import {
-  MEAL_SLOTS,
   QUICK_MINUTES,
   SLOT_LABEL,
   addDays,
@@ -191,6 +190,9 @@ export function PlanView({
       })}
 
       <PlanSheet
+        // Keyed so a different slot gets a fresh sheet rather than one an
+        // effect has to clean up after.
+        key={target ? `${target.date}-${target.slot}` : "none"}
         target={target}
         recipes={recipes}
         people={people}
@@ -231,13 +233,6 @@ function PlanSheet({
   const [custom, setCustom] = React.useState("");
   const [pending, startTransition] = React.useTransition();
   const showToast = useToast();
-
-  React.useEffect(() => {
-    setSearch("");
-    setQuickOnly(false);
-    setPersonId(null);
-    setCustom("");
-  }, [target]);
 
   const ranked = React.useMemo(() => {
     if (!target) return [];
