@@ -485,6 +485,7 @@ describe("candidate generation", () => {
           matchStatus: "UNMATCHED",
           rawName: "Mystery item",
           rawBrand: null,
+        imageUrl: null,
           observedAt: now.toISOString(),
         },
       ],

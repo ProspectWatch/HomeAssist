@@ -150,6 +150,7 @@ export function buildFlyerObservations(input: {
       matchStatus: match.status,
       rawName: deal.name,
       rawBrand: null,
+      imageUrl: deal.imageUrl,
       observedAt,
     });
   }
@@ -295,6 +296,7 @@ export function buildOnlineObservations(input: {
       matchStatus: match.status,
       rawName: price.name,
       rawBrand: null,
+      imageUrl: price.imageUrl,
       observedAt,
     });
   }

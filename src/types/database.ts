@@ -1348,6 +1348,7 @@ export type Database = {
           external_product_id: string | null
           household_id: string | null
           id: string
+          image_url: string | null
           match_confidence: number | null
           match_method: string | null
           match_status: string
@@ -1377,6 +1378,7 @@ export type Database = {
           external_product_id?: string | null
           household_id?: string | null
           id?: string
+          image_url?: string | null
           match_confidence?: number | null
           match_method?: string | null
           match_status?: string
@@ -1406,6 +1408,7 @@ export type Database = {
           external_product_id?: string | null
           household_id?: string | null
           id?: string
+          image_url?: string | null
           match_confidence?: number | null
           match_method?: string | null
           match_status?: string

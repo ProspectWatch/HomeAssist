@@ -118,6 +118,7 @@ function toObservation(
     retailerId: raw.retailerId,
     retailerLocationId: raw.retailerLocationId,
     externalProductId: raw.externalProductId,
+    imageUrl: raw.imageUrl ?? null,
     observedPriceCents: raw.currentPriceCents,
     regularPriceCents: raw.regularPriceCents ?? null,
     unitPriceText: raw.unitPriceText ?? null,

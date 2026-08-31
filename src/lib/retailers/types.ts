@@ -104,6 +104,9 @@ export type PriceObservationRecord = {
   matchStatus: MatchStatus;
   rawName: string | null;
   rawBrand: string | null;
+  /** Picture from the flyer or listing. Stands in when the catalogue product
+   *  has no photograph of its own. */
+  imageUrl: string | null;
   observedAt: string;
 };
 

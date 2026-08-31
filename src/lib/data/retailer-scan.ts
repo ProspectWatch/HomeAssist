@@ -188,6 +188,7 @@ export async function runHouseholdScan(householdId: string): Promise<ScanRunResu
         match_status: o.matchStatus,
         raw_name: o.rawName,
         raw_brand: o.rawBrand,
+        image_url: o.imageUrl,
         observed_at: o.observedAt,
       }));
       // ignoreDuplicates: a repeat sighting of the same price today is not new

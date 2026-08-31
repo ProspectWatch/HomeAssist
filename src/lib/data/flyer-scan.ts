@@ -330,38 +330,74 @@ export async function runFlyerScan(householdId: string, client?: ScanClient): Pr
       match_method: o.matchMethod,
       match_status: o.matchStatus,
       raw_name: o.rawName,
+      image_url: o.imageUrl,
       observed_at: o.observedAt,
     }));
-    // Collapse anything that would land on the same unique-index key before
-    // it reaches Postgres, so one statement never carries two rows the index
-    // considers identical.
-    const byIndexKey = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) {
-      const key = [
+    // The same offer must not be recorded twice in a day. A unique index
+    // enforces that, but it is built on expressions (coalesce over the
+    // nullable columns), and PostgREST's ignoreDuplicates targets the primary
+    // key only — so a collision with that index surfaced as a hard error and
+    // failed the whole scan. Re-checking prices an hour later is a completely
+    // normal thing to do, and it was breaking every time.
+    //
+    // So duplicates are resolved here rather than left to ON CONFLICT: first
+    // against rows already stored today, then within the batch itself.
+    const today = todayISO();
+    const indexKey = (row: {
+      retailer_id: string;
+      external_product_id: string | null;
+      catalog_product_id: string | null;
+      observed_price_cents: number;
+      observed_on: string;
+    }) =>
+      [
         row.retailer_id,
         row.external_product_id ?? "",
         row.catalog_product_id ?? "",
         row.observed_price_cents,
-        row.observed_at.slice(0, 10),
+        row.observed_on,
       ].join("|");
-      if (!byIndexKey.has(key)) byIndexKey.set(key, row);
-    }
-    const unique = [...byIndexKey.values()];
 
-    // A repeat sighting of the same advertised price today is not new
-    // information, but it must not fail the scan either.
-    const { error } = await supabase
+    const { data: alreadyStored } = await supabase
       .from("retailer_price_observations")
-      .upsert(unique, { ignoreDuplicates: true });
-    if (error) {
-      return finish({
-        status: "FAILED",
-        reason: "UNKNOWN",
-        message: error.message,
-        targetsRequested: targets.length,
-      });
+      .select("retailer_id, external_product_id, catalog_product_id, observed_price_cents, observed_on")
+      .eq("observed_on", today);
+
+    const seen = new Set(
+      ((alreadyStored ?? []) as {
+        retailer_id: string;
+        external_product_id: string | null;
+        catalog_product_id: string | null;
+        observed_price_cents: number;
+        observed_on: string;
+      }[]).map(indexKey),
+    );
+
+    const fresh: typeof rows = [];
+    for (const row of rows) {
+      const key = indexKey({ ...row, observed_on: row.observed_at.slice(0, 10) });
+      if (seen.has(key)) continue;
+      seen.add(key);
+      fresh.push(row);
     }
-    stored = unique.length;
+
+    if (fresh.length > 0) {
+      const { error } = await supabase.from("retailer_price_observations").insert(fresh);
+      if (error) {
+        // 23505 means another writer got there first — the price is recorded,
+        // which is the outcome we wanted. Anything else is a real failure.
+        if (error.code !== "23505") {
+          return finish({
+            status: "FAILED",
+            reason: "UNKNOWN",
+            message: error.message,
+            targetsRequested: targets.length,
+          });
+        }
+      } else {
+        stored = fresh.length;
+      }
+    }
   }
 
   return finish({
