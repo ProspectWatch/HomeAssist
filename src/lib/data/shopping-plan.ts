@@ -45,7 +45,7 @@ async function getRecentObservations(
   const { data } = await supabase
     .from("retailer_price_observations")
     .select(
-      "catalog_product_id, retailer_id, retailer_location_id, external_product_id, observed_price_cents, regular_price_cents, unit_price_text, package_size, unit, promotion_text, valid_from, valid_until, availability, source_url, source_type, match_confidence, match_method, match_status, raw_name, raw_brand, observed_at",
+      "catalog_product_id, retailer_id, retailer_location_id, external_product_id, observed_price_cents, regular_price_cents, unit_price_text, package_size, unit, promotion_text, valid_from, valid_until, availability, source_url, source_type, match_confidence, match_method, match_status, raw_name, raw_brand, image_url, observed_at",
     )
     .in("catalog_product_id", catalogIds)
     .in("match_status", ["MATCHED", "LIKELY_MATCH"])
@@ -80,6 +80,7 @@ async function getRecentObservations(
       matchStatus: row.match_status as PriceObservationRecord["matchStatus"],
       rawName: row.raw_name as string | null,
       rawBrand: row.raw_brand as string | null,
+      imageUrl: (row.image_url as string | null) ?? null,
       observedAt: row.observed_at as string,
     });
   }

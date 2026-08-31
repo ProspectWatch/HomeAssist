@@ -415,6 +415,7 @@ export type Database = {
           created_at: string
           household_id: string
           id: string
+          image_url: string | null
           label: string
           notes: string | null
           preferred_brand: string | null
@@ -436,6 +437,7 @@ export type Database = {
           created_at?: string
           household_id: string
           id?: string
+          image_url?: string | null
           label: string
           notes?: string | null
           preferred_brand?: string | null
@@ -457,6 +459,7 @@ export type Database = {
           created_at?: string
           household_id?: string
           id?: string
+          image_url?: string | null
           label?: string
           notes?: string | null
           preferred_brand?: string | null
@@ -1348,6 +1351,7 @@ export type Database = {
           external_product_id: string | null
           household_id: string | null
           id: string
+          image_url: string | null
           match_confidence: number | null
           match_method: string | null
           match_status: string
@@ -1377,6 +1381,7 @@ export type Database = {
           external_product_id?: string | null
           household_id?: string | null
           id?: string
+          image_url?: string | null
           match_confidence?: number | null
           match_method?: string | null
           match_status?: string
@@ -1406,6 +1411,7 @@ export type Database = {
           external_product_id?: string | null
           household_id?: string | null
           id?: string
+          image_url?: string | null
           match_confidence?: number | null
           match_method?: string | null
           match_status?: string

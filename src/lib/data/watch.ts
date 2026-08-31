@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { PriceStatus } from "@/components/ui/status-badge";
+import { getPriceBook } from "@/lib/data/price-book";
 
 export type WatchItem = {
   id: string;
@@ -15,6 +16,12 @@ export type WatchItem = {
   athlete_name: string | null;
   needed_by: string | null;
   notes: string | null;
+  /** The product's own photograph, where the household has one. */
+  image_url: string | null;
+  /** Where the cheapest price came from, so the row says where to buy it. */
+  lowest_retailer: string | null;
+  /** How many sightings the price rests on — one price is not a price history. */
+  sightings: number;
 };
 
 type WatchRow = {
@@ -29,6 +36,8 @@ type WatchRow = {
     id: string;
     title: string;
     department_key: string | null;
+    image_url: string | null;
+    catalog_product_id: string | null;
     retailer: { name: string } | null;
   } | null;
   athlete: { name: string } | null;
@@ -41,7 +50,7 @@ export async function getWatchItems(householdId: string | null): Promise<WatchIt
     const { data, error } = await supabase
       .from("watch_items")
       .select(
-        "id, category, target_price_cents, regular_price_cents, price_status, needed_by, notes, product:products(id, title, department_key, retailer:retailers(name)), athlete:athletes(name)",
+        "id, category, target_price_cents, regular_price_cents, price_status, needed_by, notes, product:products(id, title, department_key, image_url, catalog_product_id, retailer:retailers(name)), athlete:athletes(name)",
       )
       .eq("household_id", householdId)
       .eq("status", "watching")
@@ -49,28 +58,20 @@ export async function getWatchItems(householdId: string | null): Promise<WatchIt
     if (error || !data) return [];
 
     const rows = data as unknown as WatchRow[];
-    const productIds = rows.map((r) => r.product?.id).filter((v): v is string => !!v);
-    const priceByProduct = new Map<string, { current: number | null; lowest: number | null }>();
-    if (productIds.length > 0) {
-      const { data: snapshots } = await supabase
-        .from("price_snapshots")
-        .select("product_id, price_cents, captured_at")
-        .in("product_id", productIds)
-        .order("captured_at", { ascending: false });
-      for (const s of snapshots ?? []) {
-        const existing = priceByProduct.get(s.product_id);
-        if (!existing) {
-          priceByProduct.set(s.product_id, { current: s.price_cents, lowest: s.price_cents });
-        } else if (existing.lowest === null || s.price_cents < existing.lowest) {
-          existing.lowest = s.price_cents;
-        }
-      }
-    }
+
+    // Prices come from the price book — household purchases and the retailer
+    // observations the flyer scan writes — not from price_snapshots. That table
+    // was scaffolding for a pipeline that was built somewhere else: nothing has
+    // ever written a row to it, so every watched item reported no price at all
+    // while the prices it wanted were sitting one table over. Deals and Price
+    // History were rewired off it earlier; this was the last reader left.
+    const book = await getPriceBook(householdId);
 
     return rows
       .filter((r) => r.product)
       .map((r) => {
-        const prices = priceByProduct.get(r.product!.id);
+        const catalogId = r.product!.catalog_product_id;
+        const entry = catalogId ? book.get(catalogId) : undefined;
         return {
           id: r.id,
           title: r.product!.title,
@@ -78,13 +79,16 @@ export async function getWatchItems(householdId: string | null): Promise<WatchIt
           department_key: r.product!.department_key,
           target_price_cents: r.target_price_cents,
           regular_price_cents: r.regular_price_cents,
-          current_price_cents: prices?.current ?? null,
-          lowest_price_cents: prices?.lowest ?? null,
+          current_price_cents: entry?.lastCents ?? null,
+          lowest_price_cents: entry?.lowestCents ?? null,
           price_status: r.price_status,
           retailer_name: r.product!.retailer?.name ?? null,
           athlete_name: r.athlete?.name ?? null,
           needed_by: r.needed_by,
           notes: r.notes,
+          image_url: r.product!.image_url,
+          lowest_retailer: entry?.lowestRetailer ?? null,
+          sightings: entry?.sightings ?? 0,
         };
       });
   } catch {

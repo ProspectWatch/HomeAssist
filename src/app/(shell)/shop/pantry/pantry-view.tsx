@@ -19,7 +19,14 @@ import { PANTRY_HERO_IMAGE } from "@/lib/assets";
 import type { PantryProduct } from "@/lib/data/pantry";
 import type { InventoryStatus } from "@/lib/data/inventory";
 import type { CatalogProduct } from "@/lib/data/catalog";
-import { addPantryItemToTrip, addPantryRegularBuy, setInventoryStatus } from "./actions";
+import {
+  addPantryItemToTrip,
+  addPantryRegularBuy,
+  preparePantryImageUpload,
+  setInventoryStatus,
+  setPantryImage,
+} from "./actions";
+import { ProductPhotoButton } from "@/components/pantry/product-photo-button";
 
 const ALL = "All";
 const STATUS_FILTERS = ["All", "In Stock", "Low", "Out", "Unknown", "On List"] as const;
@@ -237,6 +244,19 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
                     <div className="text-[11px] text-muted2">{item.stock_location}</div>
                   ) : null}
                 </div>
+                <ProductPhotoButton
+                  title={item.title}
+                  // A row backed by a preference writes to the household layer;
+                  // a household-owned SKU writes to its own row. Each keeps its
+                  // photo where the rest of its data already lives.
+                  catalogProductId={item.id.startsWith("pref:") ? item.catalog_product_id : null}
+                  productId={item.id.startsWith("pref:") ? null : item.id}
+                  hasPhoto={Boolean(item.image_url)}
+                  prepare={preparePantryImageUpload}
+                  attach={setPantryImage}
+                  onUploaded={() => router.refresh()}
+                  onError={showToast}
+                />
               </div>
               <StatusActions
                 status={item.inventory_status}

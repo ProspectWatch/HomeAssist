@@ -4,7 +4,7 @@ import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { bestPricesFromRows } from "@/lib/data/deals";
 import { getPriceBookRows } from "@/lib/data/price-book";
 import { getStores } from "@/lib/data/stores";
-import { getLastFlyerScan, getLiveDeals, getOnlinePrices } from "@/lib/data/flyer-deals";
+import { getLastFlyerScan, getLiveDeals, getOnlinePrices, groupDeals } from "@/lib/data/flyer-deals";
 import type { PriceBookEntry } from "@/lib/pricing/price-book";
 import { DealsView } from "./deals-view";
 
@@ -31,8 +31,8 @@ export default async function DealsPage() {
       book={book}
       bestPrices={bestPricesFromRows(rows)}
       stores={stores}
-      liveDeals={liveDeals}
-      onlinePrices={onlinePrices}
+      liveDeals={groupDeals(liveDeals)}
+      onlinePrices={groupDeals(onlinePrices)}
       lastScan={lastScan}
     />
   );

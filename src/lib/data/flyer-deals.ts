@@ -34,6 +34,8 @@ export type LiveDeal = {
    *  hidden — flyers advertise "CARROTS OR YELLOW ONIONS" as one offer, and
    *  the reader should know which part we read. */
   matchStatus: string;
+  /** Picture from the flyer or listing itself, when the catalogue has none. */
+  offerImageUrl: string | null;
   /** The flyer advertised several products under this price, so which one it
    *  refers to is genuinely uncertain. Surfaced, and reason enough to withhold
    *  a savings claim. */
@@ -41,6 +43,80 @@ export type LiveDeal = {
   /** Null when the price book has nothing to judge this against. */
   verdict: PriceVerdict | null;
 };
+
+/**
+ * One product, with every store offering it this week.
+ *
+ * Deals arrive one row per store, so the same watermelon appeared as three
+ * separate cards and the reader had to spot for themselves that one of them
+ * was half the price of another. Grouping puts the comparison on the card,
+ * which is the entire question a deals page exists to answer.
+ */
+export type DealGroup = {
+  catalogProductId: string;
+  name: string;
+  category: string;
+  imageUrl: string | null;
+  imageReady: boolean;
+  isRegularBuy: boolean;
+  /** Cheapest first. */
+  offers: LiveDeal[];
+  bestPriceCents: number;
+  /** How much the priciest store wants over the cheapest, when more than one
+   *  is offering it — the number that says whether choosing matters. */
+  spreadCents: number;
+  /** The verdict for the cheapest offer, when the price book can judge it. */
+  verdict: PriceVerdict | null;
+};
+
+/** Groups per-store offers into one entry per product. */
+export function groupDeals(deals: LiveDeal[]): DealGroup[] {
+  const byProduct = new Map<string, LiveDeal[]>();
+  for (const deal of deals) {
+    const bucket = byProduct.get(deal.catalogProductId);
+    if (bucket) bucket.push(deal);
+    else byProduct.set(deal.catalogProductId, [deal]);
+  }
+
+  const groups: DealGroup[] = [];
+  for (const offers of byProduct.values()) {
+    const sorted = [...offers].sort((a, b) => a.priceCents - b.priceCents);
+    const best = sorted[0];
+    const worst = sorted[sorted.length - 1];
+    groups.push({
+      catalogProductId: best.catalogProductId,
+      name: best.name,
+      category: best.category,
+      // The offer's own picture wins here, and the catalogue's is the
+      // fallback — the opposite of everywhere else in the app.
+      //
+      // A deal card is about one specific product on one specific shelf. The
+      // catalogue image is a generic stand-in for the concept, and using it
+      // meant five different ketchup offers — Heinz, French's, store brand —
+      // all rendered the same Heinz bottle, which says something untrue about
+      // four of them. The flyer's clipping is a picture of the thing actually
+      // being sold.
+      imageUrl: best.offerImageUrl ?? (best.imageReady ? best.imageUrl : null) ??
+        (sorted.find((o) => o.offerImageUrl)?.offerImageUrl ?? null),
+      imageReady: Boolean(best.offerImageUrl) || Boolean(best.imageReady && best.imageUrl) ||
+        sorted.some((o) => o.offerImageUrl),
+      isRegularBuy: best.isRegularBuy,
+      offers: sorted,
+      bestPriceCents: best.priceCents,
+      spreadCents: worst.priceCents - best.priceCents,
+      verdict: best.verdict,
+    });
+  }
+
+  return groups.sort(
+    (a, b) =>
+      Number(b.isRegularBuy) - Number(a.isRegularBuy) ||
+      // A real choice between stores leads: that is money on the table.
+      Number(b.offers.length > 1) - Number(a.offers.length > 1) ||
+      b.spreadCents - a.spreadCents ||
+      a.name.localeCompare(b.name),
+  );
+}
 
 type Row = {
   id: string;
@@ -53,6 +129,7 @@ type Row = {
   source_url: string | null;
   observed_at: string;
   match_status: string;
+  image_url: string | null;
   retailer: { name: string } | null;
   catalog_product: {
     display_name: string;
@@ -72,7 +149,7 @@ function matchRank(deal: LiveDeal): number {
 }
 
 const SELECT =
-  "id, catalog_product_id, observed_price_cents, regular_price_cents, promotion_text, raw_name, valid_until, source_url, observed_at, match_status, retailer:retailers(name), catalog_product:catalog_products(display_name, category, image_url, image_ready)";
+  "id, catalog_product_id, observed_price_cents, regular_price_cents, promotion_text, raw_name, valid_until, source_url, observed_at, match_status, image_url, retailer:retailers(name), catalog_product:catalog_products(display_name, category, image_url, image_ready)";
 
 /**
  * How long a website price is treated as current.
@@ -83,7 +160,7 @@ const SELECT =
  */
 const ONLINE_FRESHNESS_DAYS = 14;
 
-export async function getLiveDeals(householdId: string | null, limit = 40): Promise<LiveDeal[]> {
+export async function getLiveDeals(householdId: string | null, limit = 120): Promise<LiveDeal[]> {
   if (!householdId) return [];
   try {
     const supabase = await createClient();
@@ -148,6 +225,7 @@ export async function getLiveDeals(householdId: string | null, limit = 40): Prom
         sourceUrl: row.source_url,
         isRegularBuy: regularBuys.has(row.catalog_product_id),
         matchStatus: row.match_status,
+        offerImageUrl: row.image_url,
         isMultiItemOffer: multiItem,
         verdict,
       });
@@ -258,6 +336,7 @@ export async function getOnlinePrices(householdId: string | null, limit = 30): P
         sourceUrl: row.source_url,
         isRegularBuy: regularBuys.has(row.catalog_product_id),
         matchStatus: row.match_status,
+        offerImageUrl: row.image_url,
         isMultiItemOffer: multiItem,
         verdict: entry ? assessPrice(entry, row.observed_price_cents) : null,
       });

@@ -19,7 +19,7 @@ import { parsePriceInput } from "@/lib/pricing/parse-price";
 import type { CatalogProduct } from "@/lib/data/catalog";
 import type { Store } from "@/lib/data/stores";
 import type { BestPrice } from "@/lib/data/deals";
-import type { LiveDeal } from "@/lib/data/flyer-deals";
+import type { DealGroup } from "@/lib/data/flyer-deals";
 import { addDealToList, logSeenPrice, scanFlyerDeals } from "./actions";
 
 const VERDICT_STYLES: Record<PriceVerdictCode, { className: string; icon: typeof TrendingDown }> = {
@@ -41,110 +41,121 @@ function formatDeadline(validUntil: string | null): string | null {
   return `ends ${end.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })}`;
 }
 
-function DealCard({ deal }: { deal: LiveDeal }) {
+function DealGroupCard({ group }: { group: DealGroup }) {
   const [adding, startAdd] = React.useTransition();
   const [added, setAdded] = React.useState(false);
   const showToast = useToast();
   const router = useRouter();
 
+  const best = group.offers[0];
+  const strong = group.verdict?.code === "BEST_EVER" || group.verdict?.code === "GOOD";
+
   function addToList() {
     startAdd(async () => {
       const res = await addDealToList({
-        catalogProductId: deal.catalogProductId,
-        name: deal.name,
-        retailerName: deal.retailerName,
-        priceCents: deal.priceCents,
-        validUntil: deal.validUntil,
+        catalogProductId: group.catalogProductId,
+        name: group.name,
+        retailerName: best.retailerName,
+        priceCents: best.priceCents,
+        validUntil: best.validUntil,
       });
       if (!res.ok) {
         showToast(res.message);
         return;
       }
       setAdded(true);
-      showToast(res.alreadyOnList ? `${deal.name} is already on your list` : `${deal.name} added to your list`);
+      showToast(res.alreadyOnList ? `${group.name} is already on your list` : `${group.name} added to your list`);
       router.refresh();
     });
   }
 
-  const deadline = formatDeadline(deal.validUntil);
-              const strong = deal.verdict?.code === "BEST_EVER" || deal.verdict?.code === "GOOD";
   return (
-                <div
-                  key={deal.id}
-                  className={`flex gap-3 rounded-(--radius-md) border bg-white p-3 shadow-(--shadow-card) ${
-                    strong ? "border-green" : "border-line"
-                  }`}
-                >
-                  <ProductImage
-                    src={deal.imageReady ? deal.imageUrl : null}
-                    alt={deal.name}
-                    height={52}
-                    category={deal.category}
-                    className="w-13 shrink-0 overflow-hidden rounded-(--radius-sm) border border-line"
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold">{deal.name}</div>
-                        {/* The flyer's own wording, so a mis-match is visible
-                            rather than hidden behind our catalogue name. */}
-                        {deal.rawName ? (
-                          <div className="truncate text-[11px] text-muted2">{deal.rawName}</div>
-                        ) : null}
-                      </div>
-                      {deal.isRegularBuy ? <Badge variant="oak">Regular</Badge> : null}
-                    </div>
+    <div
+      className={`flex gap-3 rounded-(--radius-md) border bg-white p-3 shadow-(--shadow-card) ${
+        strong ? "border-green" : "border-line"
+      }`}
+    >
+      <ProductImage
+        src={group.imageUrl}
+        alt={group.name}
+        height={60}
+        category={group.category}
+        className="w-15 shrink-0 overflow-hidden rounded-(--radius-sm) border border-line"
+      />
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="truncate text-sm font-semibold">{group.name}</div>
+          {group.isRegularBuy ? <Badge variant="oak">Regular</Badge> : null}
+        </div>
 
-                    <div className="flex flex-wrap items-baseline gap-x-2 text-[11.5px]">
-                      <span className="text-sm font-semibold text-green">{formatCents(deal.priceCents)}</span>
-                      {deal.regularPriceCents && deal.regularPriceCents > deal.priceCents ? (
-                        <span className="text-muted2 line-through">{formatCents(deal.regularPriceCents)}</span>
-                      ) : null}
-                      <span className="text-muted">
-                        {deal.retailerName ?? "Store not identified"}
-                        {deadline ? ` · ${deadline}` : ""}
-                      </span>
-                    </div>
-
-                    {deal.promotionText ? (
-                      <div className="text-[11px] font-semibold text-oak">{deal.promotionText}</div>
-                    ) : null}
-
-                    {deal.verdict ? (
-                      <p className="text-[11px] leading-relaxed text-muted">
-                        <span className="font-semibold text-ink">{deal.verdict.headline}.</span>{" "}
-                        {deal.verdict.detail}
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-muted2">
-                        No price history for this yet — nothing to compare it against.
-                      </p>
-                    )}
-
-                    {/* Flyers advertise several products under one price
-                        ("CARROTS OR YELLOW ONIONS"). Say so rather than
-                        presenting one reading of the offer as a fact. */}
-                    {deal.isMultiItemOffer ? (
-                      <p className="text-[10.5px] text-muted2">
-                        This flyer offer covers more than one product — check the wording above before counting on it.
-                      </p>
-                    ) : null}
-
-                    <button
-                      type="button"
-                      onClick={addToList}
-                      disabled={adding || added}
-                      className="mt-1 flex w-fit cursor-pointer items-center gap-1 rounded-(--radius-sm) border border-line px-2 py-1 text-[11px] font-semibold text-ink disabled:opacity-60"
-                    >
-                      {added ? (
-                        <Check className="h-3 w-3" aria-hidden="true" />
-                      ) : (
-                        <Plus className="h-3 w-3" aria-hidden="true" />
-                      )}
-                      {added ? "On your list" : adding ? "Adding…" : "Add to list"}
-                    </button>
-                  </div>
+        {/* One line per store, cheapest first — the comparison is the point. */}
+        <div className="flex flex-col gap-1">
+          {group.offers.map((offer, i) => {
+            const deadline = formatDeadline(offer.validUntil);
+            return (
+              <div key={offer.id} className="flex items-baseline justify-between gap-2">
+                <div className="min-w-0">
+                  <span
+                    className={`text-[13px] font-bold ${i === 0 ? "text-ink" : "text-muted"}`}
+                  >
+                    {offer.retailerName ?? "Store not identified"}
+                  </span>
+                  {deadline ? (
+                    <span className="ml-1.5 text-[10.5px] text-muted2">{deadline}</span>
+                  ) : null}
+                  {offer.rawName ? (
+                    <div className="truncate text-[10.5px] text-muted2">{offer.rawName}</div>
+                  ) : null}
                 </div>
+                <div className="shrink-0 text-right">
+                  <span
+                    className={`text-[13.5px] font-semibold ${i === 0 ? "text-green" : "text-muted"}`}
+                  >
+                    {formatCents(offer.priceCents)}
+                  </span>
+                  {offer.regularPriceCents && offer.regularPriceCents > offer.priceCents ? (
+                    <span className="ml-1 text-[10.5px] text-muted2 line-through">
+                      {formatCents(offer.regularPriceCents)}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {group.offers.length > 1 && group.spreadCents > 0 ? (
+          <div className="text-[11px] font-semibold text-oak">
+            {formatCents(group.spreadCents)} cheaper at {best.retailerName ?? "the first store"}
+          </div>
+        ) : null}
+
+        {group.verdict ? (
+          <p className="text-[11px] leading-relaxed text-muted">
+            <span className="font-semibold text-ink">{group.verdict.headline}.</span>{" "}
+            {group.verdict.detail}
+          </p>
+        ) : (
+          <p className="text-[11px] text-muted2">No price history for this yet — nothing to compare it against.</p>
+        )}
+
+        {group.offers.some((o) => o.isMultiItemOffer) ? (
+          <p className="text-[10.5px] text-muted2">
+            At least one of these flyer offers covers more than one product — check the wording before counting on it.
+          </p>
+        ) : null}
+
+        <button
+          type="button"
+          onClick={addToList}
+          disabled={adding || added}
+          className="mt-1 flex w-fit cursor-pointer items-center gap-1 rounded-(--radius-sm) border border-line px-2 py-1 text-[11px] font-semibold text-ink disabled:opacity-60"
+        >
+          {added ? <Check className="h-3 w-3" aria-hidden="true" /> : <Plus className="h-3 w-3" aria-hidden="true" />}
+          {added ? "On your list" : adding ? "Adding…" : "Add to list"}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -159,8 +170,8 @@ export function DealsView({
   book: Record<string, PriceBookEntry>;
   bestPrices: BestPrice[];
   stores: Store[];
-  liveDeals: LiveDeal[];
-  onlinePrices: LiveDeal[];
+  liveDeals: DealGroup[];
+  onlinePrices: DealGroup[];
   lastScan: { finishedAt: string; status: string; pricesFound: number; error: string | null } | null;
 }) {
   const { products, loading } = useCatalog();
@@ -275,8 +286,8 @@ export function DealsView({
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {liveDeals.map((deal) => (
-              <DealCard key={deal.id} deal={deal} />
+            {liveDeals.map((group) => (
+              <DealGroupCard key={group.catalogProductId} group={group} />
             ))}
           </div>
         )}
@@ -290,8 +301,8 @@ export function DealsView({
             Website prices, not advertised sales — and you can order these wherever you live.
           </p>
           <div className="flex flex-col gap-2">
-            {onlinePrices.map((deal) => (
-              <DealCard key={deal.id} deal={deal} />
+            {onlinePrices.map((group) => (
+              <DealGroupCard key={group.catalogProductId} group={group} />
             ))}
           </div>
         </section>
