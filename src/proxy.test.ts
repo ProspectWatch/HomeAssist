@@ -377,4 +377,19 @@ describe("route gating", () => {
     const result = await browser.visit("/login");
     expect(result.location).toBe("https://homeassist-flame.vercel.app/home");
   });
+
+  it("lets the scheduler reach the cron endpoint with no session", async () => {
+    // The scheduled scan runs when nobody is signed in and authenticates
+    // itself with a bearer token. Bouncing it to /login made it fail
+    // silently: no error, no scan job, just prices that never updated.
+    const browser = new Browser();
+    const result = await browser.visit("/api/cron/scan");
+    expect(result.location).toBeNull();
+  });
+
+  it("still keeps a signed-out user out of other API routes", async () => {
+    const browser = new Browser();
+    const result = await browser.visit("/api/catalog");
+    expect(result.location).toBe("https://homeassist-flame.vercel.app/login");
+  });
 });

@@ -18,7 +18,7 @@ import {
 import type { KnownRetailer } from "@/lib/retailers/flyers/merchants";
 import type { MatchableCatalogProduct } from "@/lib/retailers/matching";
 import { AdapterError } from "@/lib/retailers/types";
-import { getLocationContext, getScanTargets } from "@/lib/data/retailer-scan";
+import { getLocationContext, getScanTargets, type ScanClient } from "@/lib/data/retailer-scan";
 import type { ScanTarget } from "@/lib/retailers/ingestion";
 
 /**
@@ -74,14 +74,12 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function getRetailers(): Promise<KnownRetailer[]> {
-  const supabase = await createClient();
+async function getRetailers(supabase: ScanClient): Promise<KnownRetailer[]> {
   const { data } = await supabase.from("retailers").select("id, name, kind");
   return ((data ?? []) as KnownRetailer[]).filter((r) => r.id && r.name);
 }
 
-async function getMatchableCatalog(): Promise<MatchableCatalogProduct[]> {
-  const supabase = await createClient();
+async function getMatchableCatalog(supabase: ScanClient): Promise<MatchableCatalogProduct[]> {
   const { data } = await supabase
     .from("catalog_products")
     .select("id, display_name, brand, category, subcategory, search_aliases, default_unit")
@@ -201,9 +199,8 @@ function dedupe(deals: FlyerDeal[]): FlyerDeal[] {
  * permanently unchecked. Products with no flyer observation yet go first,
  * then the ones checked longest ago.
  */
-async function rotateByStaleness(targets: ScanTarget[]): Promise<ScanTarget[]> {
+async function rotateByStaleness(targets: ScanTarget[], supabase: ScanClient): Promise<ScanTarget[]> {
   if (targets.length <= MAX_TARGETS) return targets;
-  const supabase = await createClient();
   const { data } = await supabase
     .from("retailer_price_observations")
     .select("catalog_product_id, observed_at")
@@ -227,18 +224,23 @@ async function rotateByStaleness(targets: ScanTarget[]): Promise<ScanTarget[]> {
   });
 }
 
-export async function runFlyerScan(householdId: string): Promise<FlyerScanResult> {
-  const supabase = await createClient();
+/**
+ * @param client  Supply an admin client to scan without a signed-in user
+ *                (the scheduled run). Omitted, the scan runs as the caller,
+ *                inside RLS.
+ */
+export async function runFlyerScan(householdId: string, client?: ScanClient): Promise<FlyerScanResult> {
+  const supabase = client ?? (await createClient());
   const [allTargets, location, retailers, catalog] = await Promise.all([
     // Pulled wide, then narrowed by staleness below, so successive scans
     // work through the whole list instead of re-checking the same head.
-    getScanTargets(householdId, 300),
-    getLocationContext(householdId),
-    getRetailers(),
-    getMatchableCatalog(),
+    getScanTargets(householdId, 300, supabase),
+    getLocationContext(householdId, supabase),
+    getRetailers(supabase),
+    getMatchableCatalog(supabase),
   ]);
 
-  const targets = (await rotateByStaleness(allTargets)).slice(0, MAX_TARGETS);
+  const targets = (await rotateByStaleness(allTargets, supabase)).slice(0, MAX_TARGETS);
   const startedAt = new Date().toISOString();
 
   const finish = async (result: FlyerScanResult) => {

@@ -1,6 +1,8 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 import { buildAdapters } from "@/lib/retailers/registry";
 import {
   buildScanTargets,
@@ -16,13 +18,23 @@ import type { RetailLocationContext } from "@/lib/retailers/types";
  *
  * `server-only` is imported deliberately: this module talks to retailers and
  * writes price history, and must never be pulled into a client bundle (§23).
- * It uses the ordinary request-scoped Supabase client under RLS — no
- * service-role key is used or needed here.
  */
 
+/**
+ * The Supabase client a scan should use.
+ *
+ * A person tapping "check prices" scans as themselves, inside RLS. The
+ * scheduled run has no signed-in user, so it passes an admin client instead.
+ * Same code either way — the difference belongs to the caller, not the scan.
+ */
+export type ScanClient = SupabaseClient<Database>;
+
 /** Builds the household's location anchor. Coordinates stay null unless real. */
-export async function getLocationContext(householdId: string): Promise<RetailLocationContext> {
-  const supabase = await createClient();
+export async function getLocationContext(
+  householdId: string,
+  client?: ScanClient,
+): Promise<RetailLocationContext> {
+  const supabase = client ?? (await createClient());
   const { data } = await supabase
     .from("household_settings")
     .select("postal_code")
@@ -41,8 +53,12 @@ export async function getLocationContext(householdId: string): Promise<RetailLoc
 }
 
 /** Collects the household's scan targets in priority order (§11). */
-export async function getScanTargets(householdId: string, limit = 25): Promise<ScanTarget[]> {
-  const supabase = await createClient();
+export async function getScanTargets(
+  householdId: string,
+  limit = 25,
+  client?: ScanClient,
+): Promise<ScanTarget[]> {
+  const supabase = client ?? (await createClient());
 
   const [listRes, inventoryRes, prefRes, watchRes, catalogRes] = await Promise.all([
     supabase
