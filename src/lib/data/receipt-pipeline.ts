@@ -336,7 +336,7 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
   const { data: itemRows } = await supabase
     .from("receipt_items")
     .select(
-      "id, raw_description, catalog_product_id, quantity, unit_price_cents, line_total_cents, discount_cents, line_type, match_status",
+      "id, raw_description, catalog_product_id, quantity, unit_price_cents, line_total_cents, discount_cents, line_type, match_status, confirmed_by_user",
     )
     .eq("receipt_id", receiptId);
 
@@ -350,6 +350,7 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
     discount_cents: number | null;
     line_type: string;
     match_status: string;
+    confirmed_by_user: boolean;
   };
   const items = (itemRows ?? []) as ItemRow[];
 
@@ -419,7 +420,13 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
       }
     }
 
-    // Learn the abbreviations the household just confirmed (§8).
+    // Learn the abbreviations this receipt resolved (§8).
+    //
+    // confirmed_by_user records whether a PERSON actually agreed to the
+    // mapping, not merely that it was verified. Stamping every alias as
+    // confirmed was how "RAO ALFREDO SCE -> Razors" became a permanent,
+    // apparently-trusted rule: the old matcher auto-matched it, nobody looked
+    // at it, and it was learned as though someone had.
     if (receiptRetailerId) {
       const aliasRows = usable
         .filter((i) => i.raw_description)
@@ -427,7 +434,7 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
           retailer_id: receiptRetailerId,
           raw_description: aliasKey(i.raw_description!),
           catalog_product_id: i.catalog_product_id!,
-          confirmed_by_user: true,
+          confirmed_by_user: i.confirmed_by_user,
           last_seen_at: new Date().toISOString(),
         }));
       if (aliasRows.length > 0) {
