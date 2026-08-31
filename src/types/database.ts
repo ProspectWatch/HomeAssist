@@ -369,6 +369,72 @@ export type Database = {
           },
         ]
       }
+      meal_plan_entries: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          household_id: string
+          id: string
+          note: string | null
+          person_id: string | null
+          plan_date: string
+          recipe_id: string | null
+          slot: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          household_id: string
+          id?: string
+          note?: string | null
+          person_id?: string | null
+          plan_date: string
+          recipe_id?: string | null
+          slot: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          household_id?: string
+          id?: string
+          note?: string | null
+          person_id?: string | null
+          plan_date?: string
+          recipe_id?: string | null
+          slot?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
+      recipe_person_preferences: {
+        Row: {
+          created_at: string
+          household_id: string
+          id: string
+          person_id: string
+          recipe_id: string
+          sentiment: string
+        }
+        Insert: {
+          created_at?: string
+          household_id: string
+          id?: string
+          person_id: string
+          recipe_id: string
+          sentiment: string
+        }
+        Update: {
+          created_at?: string
+          household_id?: string
+          id?: string
+          person_id?: string
+          recipe_id?: string
+          sentiment?: string
+        }
+        Relationships: []
+      }
       household_people: {
         Row: {
           created_at: string
