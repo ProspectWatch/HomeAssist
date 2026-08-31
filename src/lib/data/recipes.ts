@@ -58,6 +58,15 @@ export type RecipeDetail = {
   name: string;
   time_minutes: number | null;
   servings: string | null;
+  meal_types: string[];
+  notes: string | null;
+  /**
+   * True for the starter recipes every household can see. They are read-only:
+   * the row belongs to everyone, so one household's edit would land on the
+   * rest — which is what the RLS policies already enforce, said here so the
+   * screen can stop offering an edit that would be refused.
+   */
+  is_shared: boolean;
   ingredients: RecipeIngredient[];
 };
 
@@ -100,7 +109,7 @@ export async function getRecipe(id: string): Promise<RecipeDetail | null> {
     const { data, error } = await supabase
       .from("recipes")
       .select(
-        "id, name, time_minutes, servings, recipe_ingredients(id, name, qty, sort_order, catalog_product_id, retailer:retailers(name))",
+        "id, name, time_minutes, servings, meal_types, notes, household_id, recipe_ingredients(id, name, qty, sort_order, catalog_product_id, retailer:retailers(name))",
       )
       .eq("id", id)
       .maybeSingle();
@@ -110,6 +119,9 @@ export async function getRecipe(id: string): Promise<RecipeDetail | null> {
       name: string;
       time_minutes: number | null;
       servings: string | null;
+      meal_types: string[] | null;
+      notes: string | null;
+      household_id: string | null;
       recipe_ingredients: {
         id: string;
         name: string;
@@ -125,6 +137,9 @@ export async function getRecipe(id: string): Promise<RecipeDetail | null> {
       name: r.name,
       time_minutes: r.time_minutes,
       servings: r.servings,
+      meal_types: r.meal_types ?? [],
+      notes: r.notes,
+      is_shared: r.household_id === null,
       ingredients: [...r.recipe_ingredients]
         .sort((a, b) => a.sort_order - b.sort_order)
         .map((i) => ({ id: i.id, name: i.name, qty: i.qty, retailer: i.retailer, catalog_product_id: i.catalog_product_id })),

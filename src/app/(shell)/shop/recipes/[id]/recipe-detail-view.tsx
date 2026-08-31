@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ProductPicker } from "@/components/catalog/product-picker";
 import { RecipePhotoButton } from "@/components/recipes/recipe-photo-button";
+import { RecipeEditor } from "@/components/recipes/recipe-editor";
 import { useToast } from "@/components/shell/toast-context";
 import { storeBadge } from "@/lib/assets";
 import type { IngredientWithStock, RecipeKitchen, RecipePhoto } from "@/lib/data/recipes";
 import type { IngredientStock } from "@/lib/recipes/ingredient-match";
+import { SLOT_LABEL, type MealSlot } from "@/lib/meals/week";
 import type { CatalogProduct } from "@/lib/data/catalog";
 import {
   addIngredientToList,
@@ -41,6 +43,7 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
   const [pending, startTransition] = React.useTransition();
   const [matchingIngredientId, setMatchingIngredientId] = React.useState<string | null>(null);
   const [viewing, setViewing] = React.useState<RecipePhoto | null>(null);
+  const [editing, setEditing] = React.useState(false);
   const router = useRouter();
   const showToast = useToast();
 
@@ -112,12 +115,34 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
         </div>
       </div>
 
-      <div className="px-5 pb-1">
-        <div className="font-serif text-2xl">{recipe.name}</div>
-        <div className="mt-0.5 text-[12.5px] text-muted">
-          {recipe.time_minutes ? `${recipe.time_minutes} min` : "—"} · {recipe.servings ?? "—"}
+      <div className="flex items-start justify-between gap-3 px-5 pb-1">
+        <div className="min-w-0">
+          <div className="font-serif text-2xl">{recipe.name}</div>
+          <div className="mt-0.5 text-[12.5px] text-muted">
+            {recipe.time_minutes ? `${recipe.time_minutes} min` : "—"} · {recipe.servings ?? "—"}
+            {recipe.meal_types.length > 0
+              ? ` · ${recipe.meal_types.map((t) => SLOT_LABEL[t as MealSlot] ?? t).join(", ")}`
+              : ""}
+          </div>
         </div>
+        {/* Not offered on the starter recipes: that row belongs to every
+            household, so RLS refuses the write, and a button that always
+            fails is worse than no button. */}
+        {recipe.is_shared ? (
+          <span className="mt-1 shrink-0 text-[11px] text-muted2">Starter recipe</span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="mt-1 shrink-0 cursor-pointer text-[12.5px] font-semibold text-ink"
+          >
+            Edit
+          </button>
+        )}
       </div>
+      {recipe.notes ? (
+        <p className="px-5 pt-1 text-[12px] leading-snug break-words text-muted">{recipe.notes}</p>
+      ) : null}
 
       {/* ------------------------------------------------------------------
           Ingredients first. The question in front of someone opening a recipe
@@ -144,7 +169,9 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
             key={ing.id}
             ingredient={ing}
             disabled={pending}
-            onLink={() => setMatchingIngredientId(ing.id)}
+            // Linking writes to the ingredient row, which on a starter recipe
+            // is shared with every household. Own recipes only.
+            onLink={recipe.is_shared ? null : () => setMatchingIngredientId(ing.id)}
             onAdd={() =>
               run(
                 () =>
@@ -262,6 +289,17 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
         ) : null}
       </BottomSheet>
 
+      {recipe.is_shared ? null : (
+        <RecipeEditor
+          // Remounted on open so it is seeded from the recipe as it now is,
+          // rather than kept in sync by an effect.
+          key={editing ? `open-${recipe.id}` : "closed"}
+          recipe={recipe}
+          open={editing}
+          onClose={() => setEditing(false)}
+        />
+      )}
+
       <BottomSheet open={matchingIngredientId !== null} onClose={() => setMatchingIngredientId(null)}>
         <div className="mb-1 text-sm font-semibold">Match to a catalogue product</div>
         <p className="mb-3 text-[11.5px] leading-snug text-muted">
@@ -286,7 +324,7 @@ function IngredientRow({
 }: {
   ingredient: IngredientWithStock;
   disabled: boolean;
-  onLink: () => void;
+  onLink: (() => void) | null;
   onAdd: () => void;
 }) {
   const badge = storeBadge(ingredient.retailer?.name);
@@ -326,16 +364,20 @@ function IngredientRow({
             + Add to list
           </button>
         )}
-        <button
-          type="button"
-          onClick={onLink}
-          className={`ml-auto flex shrink-0 cursor-pointer items-center gap-1 text-[11px] ${
-            ingredient.catalog_product_id ? "text-oak" : "text-muted2"
-          }`}
-        >
-          <Link2 className="h-3.5 w-3.5" />
-          {ingredient.catalog_product_id ? "Linked" : "Link a product"}
-        </button>
+        {onLink ? (
+          <button
+            type="button"
+            onClick={onLink}
+            className={`ml-auto flex shrink-0 cursor-pointer items-center gap-1 text-[11px] ${
+              ingredient.catalog_product_id ? "text-oak" : "text-muted2"
+            }`}
+          >
+            <Link2 className="h-3.5 w-3.5" />
+            {ingredient.catalog_product_id ? "Linked" : "Link a product"}
+          </button>
+        ) : (
+          <span className="ml-auto" />
+        )}
         {ingredient.retailer ? (
           <span
             className="rounded-[6px] px-2 py-[3px] text-[10px] font-bold"
