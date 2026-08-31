@@ -40,3 +40,48 @@ export async function runManualScan(): Promise<ScanActionResult> {
     };
   });
 }
+
+/**
+ * Records a price seen on a shelf or in a flyer without buying it.
+ *
+ * This is the one way the price book grows between receipts, and it is how a
+ * flyer price gets into the comparison at all while live retailer pricing is
+ * unavailable. It writes a real observation with its real source — a
+ * hand-entered price is marked MANUAL and never dressed up as a scan.
+ */
+export async function logSeenPrice(input: {
+  catalogProductId: string;
+  retailerId: string;
+  priceCents: number;
+  note?: string | null;
+}): Promise<ActionResult> {
+  if (!input.catalogProductId) return { ok: false, message: "Pick a product first." };
+  if (!input.retailerId) return { ok: false, message: "Pick which store you saw it at." };
+  if (!Number.isFinite(input.priceCents) || input.priceCents <= 0) {
+    return { ok: false, message: "Enter a price." };
+  }
+
+  return runHouseholdAction(async (supabase, householdId) => {
+    const { error } = await supabase.from("retailer_price_observations").upsert(
+      {
+        household_id: householdId,
+        catalog_product_id: input.catalogProductId,
+        retailer_id: input.retailerId,
+        observed_price_cents: input.priceCents,
+        promotion_text: input.note?.trim() || null,
+        source_type: "MANUAL",
+        match_status: "MATCHED",
+        match_confidence: 1,
+        match_method: "manual_entry",
+        observed_at: new Date().toISOString(),
+      },
+      { ignoreDuplicates: true },
+    );
+    if (error) return { ok: false, message: error.message };
+
+    revalidatePath("/shop/deals");
+    revalidatePath("/price-history");
+    revalidatePath("/home");
+    return { ok: true };
+  });
+}

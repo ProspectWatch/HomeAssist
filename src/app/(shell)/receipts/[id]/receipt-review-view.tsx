@@ -9,6 +9,8 @@ import { Input } from "@/components/ui/input";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
+import { PriceNotes } from "./price-notes";
+import type { ReceiptPriceNote } from "@/lib/data/receipt-prices";
 import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { ReceiptDetail, ReceiptLine } from "@/lib/data/receipts";
@@ -27,9 +29,11 @@ function needsAttention(line: ReceiptLine): boolean {
 export function ReceiptReviewView({
   receipt,
   people,
+  priceNotes,
 }: {
   receipt: ReceiptDetail;
   people: HouseholdPerson[];
+  priceNotes: ReceiptPriceNote[];
 }) {
   const [pending, startTransition] = React.useTransition();
   const [pickerFor, setPickerFor] = React.useState<string | null>(null);
@@ -160,6 +164,10 @@ export function ReceiptReviewView({
           Verified — these prices are in your household history.
         </div>
       ) : null}
+
+      {/* How this shop compared to the price book as it stood before this
+          receipt. Absent entirely when there isn't the history to judge. */}
+      <PriceNotes notes={priceNotes} />
 
       {/* Only uncertain lines demand attention; confident ones are summarized (§7). */}
       {uncertain.length > 0 && !verified ? (

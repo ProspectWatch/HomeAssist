@@ -10,7 +10,7 @@ import { useToast } from "@/components/shell/toast-context";
 import { HOME_HERO_IMAGE, DEPARTMENT_HERO_IMAGES, productImage } from "@/lib/assets";
 import { formatCents } from "@/lib/money";
 import type { HomeStats } from "@/lib/data/home";
-import type { Deal } from "@/lib/data/deals";
+import type { BestPrice } from "@/lib/data/deals";
 import type { WatchItem } from "@/lib/data/watch";
 import type { DepartmentSummary } from "@/lib/data/departments";
 import type { ShoppingPlanResult } from "@/lib/shopping/types";
@@ -25,7 +25,7 @@ export function HomeView({
   inventory,
 }: {
   stats: HomeStats;
-  deals: Deal[];
+  deals: BestPrice[];
   watching: WatchItem[];
   departments: DepartmentSummary[];
   shoppingPlan: ShoppingPlanResult;
@@ -101,7 +101,7 @@ export function HomeView({
           href="/receipts"
           onClick={() => showToast("Camera would open here")}
         />
-        <QuickAction icon={Tag} label="Scan Deals" onClick={() => showToast("Retailer deal scanning isn't built yet")} />
+        <QuickAction icon={Tag} label="Check Price" href="/shop/deals" />
         <QuickAction icon={Eye} label="Add to Watch" onClick={() => openAddWatch("watch")} />
       </div>
 
@@ -112,17 +112,27 @@ export function HomeView({
         <p className="text-[12px] text-white/70">{shoppingPlan.summary}</p>
       </div>
 
-      <SectionHeader title="Deals For You" href="/shop/deals" />
+      <SectionHeader title="Best Prices You've Found" href="/shop/deals" />
       {deals.length === 0 ? (
-        <p className="mb-4.5 px-5 text-[12.5px] text-muted">No deals yet — scanning isn&apos;t built in this preview.</p>
+        <p className="mb-4.5 px-5 text-[12.5px] text-muted">
+          Nothing to compare yet — scan a few receipts and the cheapest place to buy each thing shows up here.
+        </p>
       ) : (
         <div className="mb-4.5 flex gap-2.5 overflow-x-auto px-5 pb-1">
           {deals.slice(0, 3).map((deal) => (
-            <div key={deal.id} className="w-[150px] shrink-0 overflow-hidden rounded-(--radius-md) border border-line bg-white shadow-(--shadow-card)">
-              <ProductImage src={deal.image_url} alt={deal.title} height={100} />
+            <div key={deal.catalogProductId} className="w-[150px] shrink-0 overflow-hidden rounded-(--radius-md) border border-line bg-white shadow-(--shadow-card)">
+              <ProductImage
+                src={deal.imageReady ? deal.imageUrl : null}
+                alt={deal.name}
+                height={100}
+                category={deal.category}
+              />
               <div className="px-2.5 py-2">
-                <div className="text-[12.5px] leading-tight font-semibold">{deal.title}</div>
-                <div className="mt-0.5 text-[11px] font-semibold text-green">{formatCents(deal.price_cents)}</div>
+                <div className="text-[12.5px] leading-tight font-semibold">{deal.name}</div>
+                <div className="mt-0.5 text-[11px] font-semibold text-green">
+                  {formatCents(deal.bestCents)}
+                  {deal.bestRetailer ? ` at ${deal.bestRetailer}` : ""}
+                </div>
               </div>
             </div>
           ))}

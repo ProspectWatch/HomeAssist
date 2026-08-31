@@ -1,6 +1,6 @@
 import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getHomeStats } from "@/lib/data/home";
-import { getDeals } from "@/lib/data/deals";
+import { getBestPrices } from "@/lib/data/deals";
 import { getWatchItems } from "@/lib/data/watch";
 import { getDepartmentsWithCounts } from "@/lib/data/departments";
 import { getHomeShoppingPlan } from "@/lib/data/shopping-plan";
@@ -11,7 +11,7 @@ export default async function HomePage() {
   const householdId = await getCurrentHouseholdId();
   const [stats, deals, watching, departments, shoppingPlan, inventory] = await Promise.all([
     getHomeStats(householdId),
-    getDeals(householdId),
+    getBestPrices(householdId, 6),
     getWatchItems(householdId),
     getDepartmentsWithCounts(householdId),
     getHomeShoppingPlan(householdId),
