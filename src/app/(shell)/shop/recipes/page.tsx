@@ -3,9 +3,14 @@ import { ChefHat } from "lucide-react";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getRecipes } from "@/lib/data/recipes";
+import { AddRecipeButton } from "@/components/recipes/add-recipe-button";
+import { isScreenshotImportConfigured } from "@/lib/recipes/extract-screenshot";
 
 export default async function RecipesPage() {
   const recipes = await getRecipes();
+  // Read on the server: whether a provider is configured is a deployment fact,
+  // and the key it depends on must never be near the browser.
+  const screenshotAvailable = isScreenshotImportConfigured();
 
   return (
     <div className="pb-8">
@@ -17,12 +22,16 @@ export default async function RecipesPage() {
       </div>
       <ShopTabs current="/shop/recipes" />
 
+      <div className="mb-4 px-5">
+        <AddRecipeButton screenshotAvailable={screenshotAvailable} />
+      </div>
+
       {recipes.length === 0 ? (
         <div className="px-5">
           <EmptyState
             icon={ChefHat}
-            title="No recipes available"
-            description="The recipe library couldn't be reached — try again once the app is connected."
+            title="No recipes yet"
+            description="Paste a link, upload a screenshot, or type one in."
           />
         </div>
       ) : (
