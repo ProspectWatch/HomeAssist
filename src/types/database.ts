@@ -192,6 +192,7 @@ export type Database = {
       }
       grocery_items: {
         Row: {
+          person_id: string | null
           added_by: string | null
           catalog_product_id: string | null
           category: string
@@ -207,6 +208,7 @@ export type Database = {
           source: string
         }
         Insert: {
+          person_id?: string | null
           added_by?: string | null
           catalog_product_id?: string | null
           category?: string
@@ -222,6 +224,7 @@ export type Database = {
           source?: string
         }
         Update: {
+          person_id?: string | null
           added_by?: string | null
           catalog_product_id?: string | null
           category?: string
@@ -336,6 +339,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "household_members_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      household_people: {
+        Row: {
+          created_at: string
+          household_id: string
+          id: string
+          is_child: boolean
+          name: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          household_id: string
+          id?: string
+          is_child?: boolean
+          name: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          household_id?: string
+          id?: string
+          is_child?: boolean
+          name?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_people_household_id_fkey"
             columns: ["household_id"]
             isOneToOne: false
             referencedRelation: "households"
@@ -844,6 +885,7 @@ export type Database = {
       }
       receipt_items: {
         Row: {
+          person_id: string | null
           catalog_product_id: string | null
           confirmed_by_user: boolean
           discount_cents: number | null
@@ -863,6 +905,7 @@ export type Database = {
           receipt_id: string
         }
         Insert: {
+          person_id?: string | null
           catalog_product_id?: string | null
           confirmed_by_user?: boolean
           discount_cents?: number | null
@@ -882,6 +925,7 @@ export type Database = {
           receipt_id: string
         }
         Update: {
+          person_id?: string | null
           catalog_product_id?: string | null
           confirmed_by_user?: boolean
           discount_cents?: number | null
@@ -1085,6 +1129,7 @@ export type Database = {
       }
       household_purchases: {
         Row: {
+          person_id: string | null
           catalog_product_id: string | null
           created_at: string
           discount_cents: number | null
@@ -1100,6 +1145,7 @@ export type Database = {
           unit_price_cents: number | null
         }
         Insert: {
+          person_id?: string | null
           catalog_product_id?: string | null
           created_at?: string
           discount_cents?: number | null
@@ -1115,6 +1161,7 @@ export type Database = {
           unit_price_cents?: number | null
         }
         Update: {
+          person_id?: string | null
           catalog_product_id?: string | null
           created_at?: string
           discount_cents?: number | null

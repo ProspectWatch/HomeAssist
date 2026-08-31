@@ -13,6 +13,8 @@ import { formatCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { ReceiptDetail, ReceiptLine } from "@/lib/data/receipts";
 import { CATALOG_CATEGORIES, subcategoriesFor } from "@/lib/catalog/categories";
+import { setReceiptLinePerson } from "@/lib/actions/people-actions";
+import type { HouseholdPerson } from "@/lib/household/people";
 import { confirmReceipt, createProductForReceiptLine, updateReceiptHeader, updateReceiptLine } from "../actions";
 
 /** Lines that need a human decision before the receipt can be trusted. */
@@ -22,7 +24,13 @@ function needsAttention(line: ReceiptLine): boolean {
   return line.match_status !== "MATCHED";
 }
 
-export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
+export function ReceiptReviewView({
+  receipt,
+  people,
+}: {
+  receipt: ReceiptDetail;
+  people: HouseholdPerson[];
+}) {
   const [pending, startTransition] = React.useTransition();
   const [pickerFor, setPickerFor] = React.useState<string | null>(null);
   const [newProductFor, setNewProductFor] = React.useState<{ lineId: string; name: string } | null>(null);
@@ -59,6 +67,16 @@ export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
       setNewProductFor(null);
       showToast(`Added ${name} to the catalogue`);
       router.refresh();
+    });
+  }
+
+  /** Who a line was for. Most of a shop is for the house, so this stays blank
+   *  unless someone says otherwise. */
+  function assignPerson(lineId: string, personId: string | null) {
+    startTransition(async () => {
+      const res = await setReceiptLinePerson(receipt.id, lineId, personId);
+      if (!res.ok) showToast(res.message);
+      else router.refresh();
     });
   }
 
@@ -155,6 +173,8 @@ export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
                 key={line.id}
                 line={line}
                 pending={pending}
+                people={people}
+                onAssignPerson={assignPerson}
                 onChoose={() => setPickerFor(line.id)}
                 onIgnore={() => setLine(line.id, { ignore: true })}
                 onAccept={
@@ -189,6 +209,8 @@ export function ReceiptReviewView({ receipt }: { receipt: ReceiptDetail }) {
                   key={line.id}
                   line={line}
                   pending={pending || verified}
+                  people={people}
+                  onAssignPerson={assignPerson}
                   onChoose={() => setPickerFor(line.id)}
                   onIgnore={() => setLine(line.id, { ignore: true })}
                 />
@@ -374,12 +396,16 @@ function NewProductForm({
 function LineCard({
   line,
   pending,
+  people,
+  onAssignPerson,
   onChoose,
   onIgnore,
   onAccept,
 }: {
   line: ReceiptLine;
   pending: boolean;
+  people: HouseholdPerson[];
+  onAssignPerson: (lineId: string, personId: string | null) => void;
   onChoose: () => void;
   onIgnore: () => void;
   onAccept?: () => void;
@@ -434,6 +460,55 @@ function LineCard({
           Ignore
         </button>
       </div>
+
+      {/* Only worth asking once the household has said who is in it. */}
+      {people.length > 0 ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t border-line pt-2">
+          <span className="text-[11px] text-muted2">For</span>
+          <PersonChip
+            label="the house"
+            active={line.person_id === null}
+            disabled={pending}
+            onClick={() => onAssignPerson(line.id, null)}
+          />
+          {people.map((person) => (
+            <PersonChip
+              key={person.id}
+              label={person.name}
+              active={line.person_id === person.id}
+              disabled={pending}
+              onClick={() => onAssignPerson(line.id, person.id)}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+function PersonChip({
+  label,
+  active,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "cursor-pointer rounded-full border px-2.5 py-1 text-[11.5px] font-semibold disabled:opacity-50",
+        active ? "border-ink bg-ink text-white" : "border-line bg-white text-muted",
+      )}
+    >
+      {label}
+    </button>
   );
 }

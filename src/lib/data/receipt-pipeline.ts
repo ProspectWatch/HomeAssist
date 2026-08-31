@@ -336,7 +336,7 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
   const { data: itemRows } = await supabase
     .from("receipt_items")
     .select(
-      "id, raw_description, catalog_product_id, quantity, unit_price_cents, line_total_cents, discount_cents, line_type, match_status, confirmed_by_user",
+      "id, raw_description, catalog_product_id, quantity, unit_price_cents, line_total_cents, discount_cents, line_type, match_status, confirmed_by_user, person_id",
     )
     .eq("receipt_id", receiptId);
 
@@ -351,6 +351,7 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
     line_type: string;
     match_status: string;
     confirmed_by_user: boolean;
+    person_id: string | null;
   };
   const items = (itemRows ?? []) as ItemRow[];
 
@@ -383,6 +384,8 @@ export async function verifyReceipt(householdId: string, receiptId: string): Pro
         unit_price_cents: i.unit_price_cents,
         line_total_cents: i.line_total_cents!,
         discount_cents: i.discount_cents,
+        // Who it was for, when the household said. Null means the house.
+        person_id: i.person_id,
       })),
     );
     if (purchaseError) return { ok: false, message: purchaseError.message };

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,8 @@ import type { HouseholdSettings } from "@/lib/data/settings";
 import type { Store } from "@/lib/data/stores";
 import { saveHouseholdSettings } from "./actions";
 import { signOut } from "@/lib/actions/auth-actions";
+import { addHouseholdPerson, removeHouseholdPerson } from "@/lib/actions/people-actions";
+import { buildJoinLink, type HouseholdPerson } from "@/lib/household/people";
 
 const RADIUS_LABELS: { key: string; label: string }[] = [
   { key: "grocery", label: "Grocery Radius" },
@@ -18,7 +21,17 @@ const RADIUS_LABELS: { key: string; label: string }[] = [
   { key: "major", label: "Major Purchase" },
 ];
 
-export function SettingsView({ settings, stores }: { settings: HouseholdSettings | null; stores: Store[] }) {
+export function SettingsView({
+  settings,
+  stores,
+  people,
+  siteUrl,
+}: {
+  settings: HouseholdSettings | null;
+  stores: Store[];
+  people: HouseholdPerson[];
+  siteUrl: string;
+}) {
   const [householdName, setHouseholdName] = React.useState(settings?.household_name ?? "");
   const [postal, setPostal] = React.useState(settings?.postal_code ?? "");
   const [city, setCity] = React.useState(settings?.city ?? "");
@@ -111,11 +124,10 @@ export function SettingsView({ settings, stores }: { settings: HouseholdSettings
         ))}
       </div>
 
+      <PeopleSection people={people} />
+
       {settings?.join_code ? (
-        <div className="mx-5 mt-3.5 flex justify-between rounded-(--radius-sm) border border-line bg-white px-3.5 py-2.5 shadow-(--shadow-card)">
-          <span className="text-[13px]">Household Join Code</span>
-          <span className="text-[13px] font-semibold text-oak">{settings.join_code}</span>
-        </div>
+        <InviteSection joinCode={settings.join_code} siteUrl={siteUrl} />
       ) : null}
 
       <div className="mx-5 mt-5">
@@ -129,5 +141,157 @@ export function SettingsView({ settings, stores }: { settings: HouseholdSettings
         </Button>
       </div>
     </div>
+  );
+}
+
+
+/**
+ * Who is in the household.
+ *
+ * Separate from who can sign in: a child has no login but a good share of the
+ * shopping is for them, and attribution needs a name to point at.
+ */
+function PeopleSection({ people }: { people: HouseholdPerson[] }) {
+  const [name, setName] = React.useState("");
+  const [isChild, setIsChild] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+  const [pending, startTransition] = React.useTransition();
+  const router = useRouter();
+
+  function add(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    startTransition(async () => {
+      const res = await addHouseholdPerson(name, isChild);
+      if (!res.ok) {
+        setError(res.message);
+        return;
+      }
+      setName("");
+      setIsChild(false);
+      router.refresh();
+    });
+  }
+
+  function remove(person: HouseholdPerson) {
+    startTransition(async () => {
+      const res = await removeHouseholdPerson(person.id);
+      if (!res.ok) setError(res.message);
+      else router.refresh();
+    });
+  }
+
+  return (
+    <section className="mt-5">
+      <div className="px-5 pb-2 text-[11px] font-semibold tracking-[0.09em] text-oak uppercase">
+        Household
+      </div>
+
+      {people.length > 0 ? (
+        <div className="mb-2.5 flex flex-col gap-2 px-5">
+          {people.map((person) => (
+            <div
+              key={person.id}
+              className="flex items-center justify-between rounded-(--radius-sm) border border-line bg-white px-3.5 py-2.5 shadow-(--shadow-card)"
+            >
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold text-ink">{person.name}</span>
+                <span className="block text-[11.5px] text-muted">
+                  {person.isChild ? "Child" : "Adult"}
+                  {person.hasLogin ? " · signs in" : ""}
+                </span>
+              </span>
+              <button
+                type="button"
+                aria-label={`Remove ${person.name}`}
+                disabled={pending}
+                onClick={() => remove(person)}
+                className="ml-2 shrink-0 cursor-pointer text-[12px] font-semibold text-muted2 disabled:opacity-50"
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mb-2.5 px-5 text-[12.5px] text-muted">
+          Add the people you shop for, so purchases can be attributed to them.
+        </p>
+      )}
+
+      <form onSubmit={add} className="flex flex-col gap-2 px-5">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Name"
+          maxLength={40}
+        />
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setIsChild((v) => !v)}
+            className={
+              isChild
+                ? "cursor-pointer rounded-(--radius-sm) border border-ink bg-ink px-3 py-1.5 text-[12px] font-semibold text-white"
+                : "cursor-pointer rounded-(--radius-sm) border border-line bg-white px-3 py-1.5 text-[12px] font-semibold text-ink"
+            }
+          >
+            Child
+          </button>
+          <Button type="submit" size="sm" disabled={pending || name.trim().length === 0}>
+            Add person
+          </Button>
+        </div>
+        {error ? <p className="text-[12.5px] text-[#b5482f]">{error}</p> : null}
+      </form>
+    </section>
+  );
+}
+
+/**
+ * Inviting someone.
+ *
+ * The join code already worked; what did not was getting it from one phone to
+ * another without a typo. This shares a link that carries the code, and still
+ * shows the code for anyone who would rather type it.
+ */
+function InviteSection({ joinCode, siteUrl }: { joinCode: string; siteUrl: string }) {
+  const [copied, setCopied] = React.useState(false);
+  const link = buildJoinLink(siteUrl, joinCode);
+
+  async function share() {
+    try {
+      if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({ title: "Join our HomeAssist", url: link });
+        return;
+      }
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Share sheet dismissed, or the clipboard is blocked — the code below is
+      // always readable, so there is nothing to recover from.
+    }
+  }
+
+  return (
+    <section className="mt-5">
+      <div className="px-5 pb-2 text-[11px] font-semibold tracking-[0.09em] text-oak uppercase">
+        Invite someone
+      </div>
+      <div className="mx-5 rounded-(--radius-sm) border border-line bg-white px-3.5 py-3 shadow-(--shadow-card)">
+        <p className="text-[12.5px] text-muted">
+          Send this link. They sign in with their own email and land in this household — the same
+          list, pantry and receipts.
+        </p>
+        <Button size="sm" className="mt-2.5 w-full" onClick={share}>
+          {copied ? "Link copied" : "Share invite link"}
+        </Button>
+        <div className="mt-2.5 flex justify-between border-t border-line pt-2.5">
+          <span className="text-[12.5px] text-muted">Or give them this code</span>
+          <span className="text-[12.5px] font-semibold text-oak">{joinCode}</span>
+        </div>
+      </div>
+    </section>
   );
 }

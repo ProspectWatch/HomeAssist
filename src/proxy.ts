@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const PUBLIC_PATHS = ["/login", "/auth/callback", "/auth/confirm"];
 
+// Reachable while signed in but not yet in a household — that is exactly who
+// an invite link is for, so it must not be bounced to /onboarding.
+const NO_HOUSEHOLD_PATHS = ["/onboarding", "/join"];
+
 /**
  * Builds a redirect that carries every cookie the session refresh just wrote.
  *
@@ -77,7 +81,7 @@ export async function proxy(request: NextRequest) {
     return redirectCarryingSession(url, response);
   }
 
-  if (pathname.startsWith("/onboarding") || isPublicPath) {
+  if (NO_HOUSEHOLD_PATHS.some((path) => pathname.startsWith(path)) || isPublicPath) {
     return response;
   }
 
