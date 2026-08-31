@@ -18,6 +18,24 @@ import { AdapterError } from "../types";
 
 const SEARCH_ENDPOINT = "https://backflipp.wishabi.com/flipp/items/search";
 
+/**
+ * An online shelf price from a retailer's website.
+ *
+ * Distinct from a FlyerDeal in two ways that matter: there is no validity
+ * window (it is today's price, not a dated promotion), and it is not bound to
+ * a location — anyone can order it — so it is not filtered by which stores the
+ * household shops at.
+ */
+export type OnlinePrice = {
+  merchantName: string;
+  name: string;
+  priceCents: number;
+  /** The pre-sale price when the listing shows one. */
+  originalPriceCents: number | null;
+  sku: string | null;
+  imageUrl: string | null;
+};
+
 export type FlyerDeal = {
   merchantName: string;
   name: string;
@@ -116,6 +134,41 @@ export function parseFlippItems(payload: unknown): FlyerDeal[] {
   return deals;
 }
 
+/**
+ * Parses the ecommerce listings out of a Flipp search payload.
+ *
+ * These are website prices — real online shelf prices with SKUs — for the
+ * retailers whose catalogues the aggregator carries. They are the only route
+ * to website pricing available: every grocery site this household shops at
+ * refuses automated clients at the edge, and impersonating a browser to get
+ * around that is out of scope.
+ */
+export function parseFlippEcomItems(payload: unknown): OnlinePrice[] {
+  const items = (payload as { ecom_items?: unknown })?.ecom_items;
+  if (!Array.isArray(items)) return [];
+
+  const prices: OnlinePrice[] = [];
+  for (const raw of items as Record<string, unknown>[]) {
+    const name = asString(raw.name);
+    // Ecom listings name the retailer in `merchant`; flyer items use
+    // `merchant_name`. Different fields, and mixing them up silently
+    // attributes a price to the wrong shop.
+    const merchantName = asString(raw.merchant);
+    const priceCents = toCents(raw.current_price);
+    if (!name || !merchantName || priceCents === null) continue;
+
+    prices.push({
+      merchantName,
+      name,
+      priceCents,
+      originalPriceCents: toCents(raw.original_price),
+      sku: raw.sku != null ? String(raw.sku) : raw.item_id != null ? String(raw.item_id) : null,
+      imageUrl: asString(raw.image_url),
+    });
+  }
+  return prices;
+}
+
 /** A flyer that has already expired is history, not an offer. */
 export function isCurrentlyValid(deal: FlyerDeal, today: string): boolean {
   if (deal.validTo && deal.validTo < today) return false;
@@ -137,11 +190,11 @@ export function promotionText(deal: FlyerDeal): string | null {
  * an identified client — this app serves a single household and must never
  * behave like a crawler.
  */
-export async function searchFlyerDeals(
+export async function searchFlipp(
   term: string,
   postalCode: string,
   options: { timeoutMs?: number; fetchImpl?: typeof fetch } = {},
-): Promise<FlyerDeal[]> {
+): Promise<unknown> {
   const { timeoutMs = 15000, fetchImpl = fetch } = options;
   const postal = postalCode.replace(/\s+/g, "").toUpperCase();
   if (!postal) throw new AdapterError("NOT_CONFIGURED", "No postal code set for this household.");
@@ -166,7 +219,7 @@ export async function searchFlyerDeals(
     }
     if (!res.ok) throw new AdapterError("NETWORK_ERROR", "Flyer search failed.", `HTTP ${res.status}`);
 
-    return parseFlippItems(await res.json());
+    return await res.json();
   } catch (error) {
     if (error instanceof AdapterError) throw error;
     if (error instanceof Error && error.name === "AbortError") {
@@ -237,4 +290,13 @@ export function offerKey(deal: FlyerDeal): string {
 
 function normalizeMerchantKey(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+/** Convenience wrapper for callers that only want this week's flyer deals. */
+export async function searchFlyerDeals(
+  term: string,
+  postalCode: string,
+  options: { timeoutMs?: number; fetchImpl?: typeof fetch } = {},
+): Promise<FlyerDeal[]> {
+  return parseFlippItems(await searchFlipp(term, postalCode, options));
 }

@@ -1,6 +1,3 @@
-// Generated from the live Supabase project (homeassist / ixasbzsaymqehjtjgfao).
-// Regenerate with:
-//   npx supabase gen types typescript --project-id ixasbzsaymqehjtjgfao > src/types/database.ts
 export type Json =
   | string
   | number
@@ -55,6 +52,7 @@ export type Database = {
           household_id: string
           id: string
           name: string
+          person_id: string | null
           sport: string | null
         }
         Insert: {
@@ -62,6 +60,7 @@ export type Database = {
           household_id: string
           id?: string
           name: string
+          person_id?: string | null
           sport?: string | null
         }
         Update: {
@@ -69,6 +68,7 @@ export type Database = {
           household_id?: string
           id?: string
           name?: string
+          person_id?: string | null
           sport?: string | null
         }
         Relationships: [
@@ -77,6 +77,13 @@ export type Database = {
             columns: ["household_id"]
             isOneToOne: false
             referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "athletes_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "household_people"
             referencedColumns: ["id"]
           },
         ]
@@ -192,7 +199,6 @@ export type Database = {
       }
       grocery_items: {
         Row: {
-          person_id: string | null
           added_by: string | null
           catalog_product_id: string | null
           category: string
@@ -203,12 +209,12 @@ export type Database = {
           id: string
           name: string
           note: string | null
+          person_id: string | null
           qty: string | null
           retailer_id: string | null
           source: string
         }
         Insert: {
-          person_id?: string | null
           added_by?: string | null
           catalog_product_id?: string | null
           category?: string
@@ -219,12 +225,12 @@ export type Database = {
           id?: string
           name: string
           note?: string | null
+          person_id?: string | null
           qty?: string | null
           retailer_id?: string | null
           source?: string
         }
         Update: {
-          person_id?: string | null
           added_by?: string | null
           catalog_product_id?: string | null
           category?: string
@@ -235,6 +241,7 @@ export type Database = {
           id?: string
           name?: string
           note?: string | null
+          person_id?: string | null
           qty?: string | null
           retailer_id?: string | null
           source?: string
@@ -252,6 +259,13 @@ export type Database = {
             columns: ["household_id"]
             isOneToOne: false
             referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "grocery_items_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "household_people"
             referencedColumns: ["id"]
           },
           {
@@ -461,6 +475,107 @@ export type Database = {
             columns: ["preferred_retailer_id"]
             isOneToOne: false
             referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      household_purchases: {
+        Row: {
+          catalog_product_id: string | null
+          created_at: string
+          discount_cents: number | null
+          household_id: string
+          id: string
+          line_total_cents: number
+          person_id: string | null
+          purchase_date: string
+          quantity: number | null
+          receipt_id: string | null
+          receipt_item_id: string | null
+          retailer_id: string | null
+          retailer_location_id: string | null
+          unit_price_cents: number | null
+        }
+        Insert: {
+          catalog_product_id?: string | null
+          created_at?: string
+          discount_cents?: number | null
+          household_id: string
+          id?: string
+          line_total_cents: number
+          person_id?: string | null
+          purchase_date: string
+          quantity?: number | null
+          receipt_id?: string | null
+          receipt_item_id?: string | null
+          retailer_id?: string | null
+          retailer_location_id?: string | null
+          unit_price_cents?: number | null
+        }
+        Update: {
+          catalog_product_id?: string | null
+          created_at?: string
+          discount_cents?: number | null
+          household_id?: string
+          id?: string
+          line_total_cents?: number
+          person_id?: string | null
+          purchase_date?: string
+          quantity?: number | null
+          receipt_id?: string | null
+          receipt_item_id?: string | null
+          retailer_id?: string | null
+          retailer_location_id?: string | null
+          unit_price_cents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_purchases_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_purchases_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_purchases_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "household_people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_purchases_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_purchases_receipt_item_id_fkey"
+            columns: ["receipt_item_id"]
+            isOneToOne: false
+            referencedRelation: "receipt_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_purchases_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_purchases_retailer_location_id_fkey"
+            columns: ["retailer_location_id"]
+            isOneToOne: false
+            referencedRelation: "retailer_locations"
             referencedColumns: ["id"]
           },
         ]
@@ -885,66 +1000,80 @@ export type Database = {
       }
       receipt_items: {
         Row: {
-          person_id: string | null
           catalog_product_id: string | null
           confirmed_by_user: boolean
           discount_cents: number | null
+          id: string
           line_total_cents: number | null
           line_type: string
           match_confidence: number | null
           match_method: string | null
           match_status: string
-          quantity: number | null
-          raw_description: string | null
-          sort_order: number
-          unit_price_cents: number | null
-          id: string
           name: string | null
+          person_id: string | null
           price_cents: number | null
           product_id: string | null
+          quantity: number | null
+          raw_description: string | null
           receipt_id: string
+          sort_order: number
+          unit_price_cents: number | null
         }
         Insert: {
-          person_id?: string | null
           catalog_product_id?: string | null
           confirmed_by_user?: boolean
           discount_cents?: number | null
+          id?: string
           line_total_cents?: number | null
           line_type?: string
           match_confidence?: number | null
           match_method?: string | null
           match_status?: string
-          quantity?: number | null
-          raw_description?: string | null
-          sort_order?: number
-          unit_price_cents?: number | null
-          id?: string
           name?: string | null
+          person_id?: string | null
           price_cents?: number | null
           product_id?: string | null
+          quantity?: number | null
+          raw_description?: string | null
           receipt_id: string
+          sort_order?: number
+          unit_price_cents?: number | null
         }
         Update: {
-          person_id?: string | null
           catalog_product_id?: string | null
           confirmed_by_user?: boolean
           discount_cents?: number | null
+          id?: string
           line_total_cents?: number | null
           line_type?: string
           match_confidence?: number | null
           match_method?: string | null
           match_status?: string
+          name?: string | null
+          person_id?: string | null
+          price_cents?: number | null
+          product_id?: string | null
           quantity?: number | null
           raw_description?: string | null
+          receipt_id?: string
           sort_order?: number
           unit_price_cents?: number | null
-          id?: string
-          name?: string
-          price_cents?: number
-          product_id?: string | null
-          receipt_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "receipt_items_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipt_items_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "household_people"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "receipt_items_product_id_fkey"
             columns: ["product_id"]
@@ -963,76 +1092,76 @@ export type Database = {
       }
       receipts: {
         Row: {
+          created_at: string
           document_hash: string | null
           extraction_confidence: number | null
           extraction_error: string | null
           extractor: string | null
+          household_id: string
+          id: string
+          image_url: string | null
           processed_at: string | null
+          purchased_at: string | null
           purchased_time: string | null
           raw_text: string | null
+          retailer_id: string | null
           retailer_location_id: string | null
           status: string
           storage_path: string | null
           subtotal_cents: number | null
           tax_cents: number | null
+          total_cents: number | null
           transaction_ref: string | null
           verified_at: string | null
           verified_by: string | null
-          created_at: string
-          household_id: string
-          id: string
-          image_url: string | null
-          purchased_at: string | null
-          retailer_id: string | null
-          total_cents: number | null
         }
         Insert: {
+          created_at?: string
           document_hash?: string | null
           extraction_confidence?: number | null
           extraction_error?: string | null
           extractor?: string | null
-          processed_at?: string | null
-          purchased_time?: string | null
-          raw_text?: string | null
-          retailer_location_id?: string | null
-          status?: string
-          storage_path?: string | null
-          subtotal_cents?: number | null
-          tax_cents?: number | null
-          transaction_ref?: string | null
-          verified_at?: string | null
-          verified_by?: string | null
-          created_at?: string
           household_id: string
           id?: string
           image_url?: string | null
-          purchased_at?: string | null
-          retailer_id?: string | null
-          total_cents?: number | null
-        }
-        Update: {
-          document_hash?: string | null
-          extraction_confidence?: number | null
-          extraction_error?: string | null
-          extractor?: string | null
           processed_at?: string | null
+          purchased_at?: string | null
           purchased_time?: string | null
           raw_text?: string | null
+          retailer_id?: string | null
           retailer_location_id?: string | null
           status?: string
           storage_path?: string | null
           subtotal_cents?: number | null
           tax_cents?: number | null
+          total_cents?: number | null
           transaction_ref?: string | null
           verified_at?: string | null
           verified_by?: string | null
+        }
+        Update: {
           created_at?: string
+          document_hash?: string | null
+          extraction_confidence?: number | null
+          extraction_error?: string | null
+          extractor?: string | null
           household_id?: string
           id?: string
           image_url?: string | null
+          processed_at?: string | null
           purchased_at?: string | null
+          purchased_time?: string | null
+          raw_text?: string | null
           retailer_id?: string | null
+          retailer_location_id?: string | null
+          status?: string
+          storage_path?: string | null
+          subtotal_cents?: number | null
+          tax_cents?: number | null
           total_cents?: number | null
+          transaction_ref?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
         }
         Relationships: [
           {
@@ -1047,6 +1176,13 @@ export type Database = {
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receipts_retailer_location_id_fkey"
+            columns: ["retailer_location_id"]
+            isOneToOne: false
+            referencedRelation: "retailer_locations"
             referencedColumns: ["id"]
           },
         ]
@@ -1127,93 +1263,6 @@ export type Database = {
         }
         Relationships: []
       }
-      household_purchases: {
-        Row: {
-          person_id: string | null
-          catalog_product_id: string | null
-          created_at: string
-          discount_cents: number | null
-          household_id: string
-          id: string
-          line_total_cents: number
-          purchase_date: string
-          quantity: number | null
-          receipt_id: string | null
-          receipt_item_id: string | null
-          retailer_id: string | null
-          retailer_location_id: string | null
-          unit_price_cents: number | null
-        }
-        Insert: {
-          person_id?: string | null
-          catalog_product_id?: string | null
-          created_at?: string
-          discount_cents?: number | null
-          household_id: string
-          id?: string
-          line_total_cents: number
-          purchase_date: string
-          quantity?: number | null
-          receipt_id?: string | null
-          receipt_item_id?: string | null
-          retailer_id?: string | null
-          retailer_location_id?: string | null
-          unit_price_cents?: number | null
-        }
-        Update: {
-          person_id?: string | null
-          catalog_product_id?: string | null
-          created_at?: string
-          discount_cents?: number | null
-          household_id?: string
-          id?: string
-          line_total_cents?: number
-          purchase_date?: string
-          quantity?: number | null
-          receipt_id?: string | null
-          receipt_item_id?: string | null
-          retailer_id?: string | null
-          retailer_location_id?: string | null
-          unit_price_cents?: number | null
-        }
-        Relationships: []
-      }
-      retailer_product_aliases: {
-        Row: {
-          catalog_product_id: string
-          confidence: number
-          confirmed_by_user: boolean
-          created_at: string
-          id: string
-          last_seen_at: string
-          raw_description: string
-          retailer_id: string
-          times_seen: number
-        }
-        Insert: {
-          catalog_product_id: string
-          confidence?: number
-          confirmed_by_user?: boolean
-          created_at?: string
-          id?: string
-          last_seen_at?: string
-          raw_description: string
-          retailer_id: string
-          times_seen?: number
-        }
-        Update: {
-          catalog_product_id?: string
-          confidence?: number
-          confirmed_by_user?: boolean
-          created_at?: string
-          id?: string
-          last_seen_at?: string
-          raw_description?: string
-          retailer_id?: string
-          times_seen?: number
-        }
-        Relationships: []
-      }
       retailer_locations: {
         Row: {
           active: boolean
@@ -1272,16 +1321,23 @@ export type Database = {
           source?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "retailer_locations_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       retailer_price_observations: {
         Row: {
-          household_id: string | null
-          receipt_id: string | null
           availability: string | null
           catalog_product_id: string | null
           created_at: string
           external_product_id: string | null
+          household_id: string | null
           id: string
           match_confidence: number | null
           match_method: string | null
@@ -1294,6 +1350,7 @@ export type Database = {
           raw_brand: string | null
           raw_name: string | null
           raw_payload: Json | null
+          receipt_id: string | null
           regular_price_cents: number | null
           retailer_id: string
           retailer_location_id: string | null
@@ -1305,12 +1362,11 @@ export type Database = {
           valid_until: string | null
         }
         Insert: {
-          household_id?: string | null
-          receipt_id?: string | null
           availability?: string | null
           catalog_product_id?: string | null
           created_at?: string
           external_product_id?: string | null
+          household_id?: string | null
           id?: string
           match_confidence?: number | null
           match_method?: string | null
@@ -1323,6 +1379,7 @@ export type Database = {
           raw_brand?: string | null
           raw_name?: string | null
           raw_payload?: Json | null
+          receipt_id?: string | null
           regular_price_cents?: number | null
           retailer_id: string
           retailer_location_id?: string | null
@@ -1334,12 +1391,11 @@ export type Database = {
           valid_until?: string | null
         }
         Update: {
-          household_id?: string | null
-          receipt_id?: string | null
           availability?: string | null
           catalog_product_id?: string | null
           created_at?: string
           external_product_id?: string | null
+          household_id?: string | null
           id?: string
           match_confidence?: number | null
           match_method?: string | null
@@ -1352,6 +1408,7 @@ export type Database = {
           raw_brand?: string | null
           raw_name?: string | null
           raw_payload?: Json | null
+          receipt_id?: string | null
           regular_price_cents?: number | null
           retailer_id?: string
           retailer_location_id?: string | null
@@ -1362,13 +1419,101 @@ export type Database = {
           valid_from?: string | null
           valid_until?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "retailer_price_observations_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retailer_price_observations_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retailer_price_observations_receipt_id_fkey"
+            columns: ["receipt_id"]
+            isOneToOne: false
+            referencedRelation: "receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retailer_price_observations_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retailer_price_observations_retailer_location_id_fkey"
+            columns: ["retailer_location_id"]
+            isOneToOne: false
+            referencedRelation: "retailer_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      retailer_product_aliases: {
+        Row: {
+          catalog_product_id: string
+          confidence: number
+          confirmed_by_user: boolean
+          created_at: string
+          id: string
+          last_seen_at: string
+          raw_description: string
+          retailer_id: string
+          times_seen: number
+        }
+        Insert: {
+          catalog_product_id: string
+          confidence?: number
+          confirmed_by_user?: boolean
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          raw_description: string
+          retailer_id: string
+          times_seen?: number
+        }
+        Update: {
+          catalog_product_id?: string
+          confidence?: number
+          confirmed_by_user?: boolean
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          raw_description?: string
+          retailer_id?: string
+          times_seen?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retailer_product_aliases_catalog_product_id_fkey"
+            columns: ["catalog_product_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retailer_product_aliases_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       retailers: {
         Row: {
           created_at: string
           domain: string
           id: string
+          kind: string
           logo_url: string | null
           name: string
           scan_enabled: boolean
@@ -1377,6 +1522,7 @@ export type Database = {
           created_at?: string
           domain: string
           id?: string
+          kind?: string
           logo_url?: string | null
           name: string
           scan_enabled?: boolean
@@ -1385,6 +1531,7 @@ export type Database = {
           created_at?: string
           domain?: string
           id?: string
+          kind?: string
           logo_url?: string | null
           name?: string
           scan_enabled?: boolean
@@ -1480,10 +1627,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "scan_jobs_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "scan_jobs_retailer_id_fkey"
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scan_jobs_retailer_location_id_fkey"
+            columns: ["retailer_location_id"]
+            isOneToOne: false
+            referencedRelation: "retailer_locations"
             referencedColumns: ["id"]
           },
         ]

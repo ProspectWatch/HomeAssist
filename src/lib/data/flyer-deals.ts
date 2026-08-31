@@ -71,6 +71,18 @@ function matchRank(deal: LiveDeal): number {
   return deal.isMultiItemOffer ? 1 : 0;
 }
 
+const SELECT =
+  "id, catalog_product_id, observed_price_cents, regular_price_cents, promotion_text, raw_name, valid_until, source_url, observed_at, match_status, retailer:retailers(name), catalog_product:catalog_products(display_name, category, image_url, image_ready)";
+
+/**
+ * How long a website price is treated as current.
+ *
+ * Online prices carry no expiry of their own, so one must be chosen rather
+ * than left implicit. Two weeks is long enough to survive a gap between scans
+ * and short enough that nobody is shown a price that has since moved.
+ */
+const ONLINE_FRESHNESS_DAYS = 14;
+
 export async function getLiveDeals(householdId: string | null, limit = 40): Promise<LiveDeal[]> {
   if (!householdId) return [];
   try {
@@ -80,9 +92,7 @@ export async function getLiveDeals(householdId: string | null, limit = 40): Prom
     const [dealRes, prefRes, book] = await Promise.all([
       supabase
         .from("retailer_price_observations")
-        .select(
-          "id, catalog_product_id, observed_price_cents, regular_price_cents, promotion_text, raw_name, valid_until, source_url, observed_at, match_status, retailer:retailers(name), catalog_product:catalog_products(display_name, category, image_url, image_ready)",
-        )
+        .select(SELECT)
         .eq("household_id", householdId)
         .eq("source_type", "FLYER")
         .not("catalog_product_id", "is", null)
@@ -183,5 +193,86 @@ export async function getLastFlyerScan(
     };
   } catch {
     return null;
+  }
+}
+
+/**
+ * Current website prices, judged the same way flyer deals are.
+ *
+ * Kept separate from flyer deals on purpose: a website price is what a
+ * retailer charges today, not a dated promotion, and presenting one under
+ * "on sale this week" would claim a saving nobody advertised.
+ */
+export async function getOnlinePrices(householdId: string | null, limit = 30): Promise<LiveDeal[]> {
+  if (!householdId) return [];
+  try {
+    const supabase = await createClient();
+    const since = new Date(Date.now() - ONLINE_FRESHNESS_DAYS * 86400000).toISOString();
+
+    const [priceRes, prefRes, book] = await Promise.all([
+      supabase
+        .from("retailer_price_observations")
+        .select(SELECT)
+        .eq("household_id", householdId)
+        .eq("source_type", "ONLINE")
+        .not("catalog_product_id", "is", null)
+        .gte("observed_at", since)
+        .order("observed_at", { ascending: false })
+        .limit(400),
+      supabase
+        .from("household_product_preferences")
+        .select("scope_key")
+        .eq("household_id", householdId)
+        .eq("scope_type", "product")
+        .eq("regular_buy", true),
+      getPriceBook(householdId),
+    ]);
+
+    const regularBuys = new Set(
+      ((prefRes.data ?? []) as { scope_key: string }[]).map((r) => r.scope_key),
+    );
+
+    const best = new Map<string, LiveDeal>();
+    for (const row of (priceRes.data ?? []) as unknown as Row[]) {
+      if (!row.catalog_product) continue;
+      const key = `${row.catalog_product_id}|${row.retailer?.name ?? ""}`;
+      const existing = best.get(key);
+      if (existing && existing.priceCents <= row.observed_price_cents) continue;
+
+      const multiItem = isMultiItemOffer(row.raw_name);
+      const entry = multiItem ? null : (book.get(row.catalog_product_id) ?? null);
+
+      best.set(key, {
+        id: row.id,
+        catalogProductId: row.catalog_product_id,
+        name: row.catalog_product.display_name,
+        category: row.catalog_product.category,
+        imageUrl: row.catalog_product.image_url,
+        imageReady: row.catalog_product.image_ready,
+        retailerName: row.retailer?.name ?? null,
+        priceCents: row.observed_price_cents,
+        regularPriceCents: row.regular_price_cents,
+        promotionText: null,
+        rawName: row.raw_name,
+        validUntil: null,
+        sourceUrl: row.source_url,
+        isRegularBuy: regularBuys.has(row.catalog_product_id),
+        matchStatus: row.match_status,
+        isMultiItemOffer: multiItem,
+        verdict: entry ? assessPrice(entry, row.observed_price_cents) : null,
+      });
+    }
+
+    return [...best.values()]
+      .sort(
+        (a, b) =>
+          Number(b.isRegularBuy) - Number(a.isRegularBuy) ||
+          matchRank(a) - matchRank(b) ||
+          (VERDICT_RANK[a.verdict?.code ?? ""] ?? 2) - (VERDICT_RANK[b.verdict?.code ?? ""] ?? 2) ||
+          a.name.localeCompare(b.name),
+      )
+      .slice(0, limit);
+  } catch {
+    return [];
   }
 }

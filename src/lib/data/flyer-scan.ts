@@ -1,8 +1,20 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { offerKey, searchFlyerDeals, type FlyerDeal } from "@/lib/retailers/flyers/flipp";
-import { buildFlyerObservations, type FlyerIngestSummary } from "@/lib/retailers/flyers/deals";
+import {
+  offerKey,
+  parseFlippEcomItems,
+  parseFlippItems,
+  searchFlipp,
+  type FlyerDeal,
+  type OnlinePrice,
+} from "@/lib/retailers/flyers/flipp";
+import {
+  buildFlyerObservations,
+  buildOnlineObservations,
+  type FlyerIngestSummary,
+  type ResultGroup,
+} from "@/lib/retailers/flyers/deals";
 import type { KnownRetailer } from "@/lib/retailers/flyers/merchants";
 import type { MatchableCatalogProduct } from "@/lib/retailers/matching";
 import { AdapterError } from "@/lib/retailers/types";
@@ -39,6 +51,11 @@ export type FlyerScanResult =
        *  `targetsRequested` were reached this run. */
       totalTargets: number;
       stored: number;
+      /** Website prices seen, and how many were placed against the catalogue. */
+      onlineSeen: number;
+      onlineStored: number;
+      /** Fresh-category listings left to the flyer feed. */
+      skippedFreshCategory: number;
     } & FlyerIngestSummary)
   | { status: "FAILED"; reason: string; message: string; targetsRequested: number };
 
@@ -48,7 +65,7 @@ function todayISO(): string {
 
 async function getRetailers(): Promise<KnownRetailer[]> {
   const supabase = await createClient();
-  const { data } = await supabase.from("retailers").select("id, name");
+  const { data } = await supabase.from("retailers").select("id, name, kind");
   return ((data ?? []) as KnownRetailer[]).filter((r) => r.id && r.name);
 }
 
@@ -72,31 +89,68 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * than as "no deals found today".
  */
 async function collectDeals(
-  terms: string[],
+  targets: ScanTarget[],
   postalCode: string,
-): Promise<{ deals: FlyerDeal[]; failures: number; lastError: AdapterError | null }> {
-  const deals: FlyerDeal[] = [];
+): Promise<{
+  dealGroups: ResultGroup<FlyerDeal>[];
+  onlineGroups: ResultGroup<OnlinePrice>[];
+  failures: number;
+  lastError: AdapterError | null;
+}> {
+  const dealGroups: ResultGroup<FlyerDeal>[] = [];
+  const onlineGroups: ResultGroup<OnlinePrice>[] = [];
   let failures = 0;
   let lastError: AdapterError | null = null;
 
-  for (let i = 0; i < terms.length; i += BATCH_SIZE) {
-    const batch = terms.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+    const batch = targets.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(
-      batch.map(async (term) => {
+      batch.map(async (target) => {
         try {
-          return await searchFlyerDeals(term, postalCode);
+          // One request carries both this week's flyer deals and the
+          // retailers' current website prices — no extra traffic for the
+          // second source.
+          const payload = await searchFlipp(target.query, postalCode);
+          return {
+            target,
+            deals: parseFlippItems(payload),
+            online: parseFlippEcomItems(payload),
+          };
         } catch (error) {
           failures++;
           if (error instanceof AdapterError) lastError = error;
-          return [];
+          return { target, deals: [], online: [] };
         }
       }),
     );
-    for (const result of results) deals.push(...result);
-    if (i + BATCH_SIZE < terms.length) await sleep(BATCH_PAUSE_MS);
+    // Results stay tied to the product they were searched for — that pairing
+    // is what stops a "Bananas" search placing banana-flavoured gum.
+    for (const result of results) {
+      if (result.deals.length > 0) {
+        dealGroups.push({ catalogProductId: result.target.catalogProductId, items: dedupe(result.deals) });
+      }
+      if (result.online.length > 0) {
+        onlineGroups.push({
+          catalogProductId: result.target.catalogProductId,
+          items: dedupeOnline(result.online),
+        });
+      }
+    }
+    if (i + BATCH_SIZE < targets.length) await sleep(BATCH_PAUSE_MS);
   }
 
-  return { deals, failures, lastError };
+  return { dealGroups, onlineGroups, failures, lastError };
+}
+
+/** Website prices repeat across search terms just as flyer deals do. */
+function dedupeOnline(prices: OnlinePrice[]): OnlinePrice[] {
+  const seen = new Set<string>();
+  return prices.filter((p) => {
+    const key = `${p.merchantName}|${p.sku ?? p.name.toLowerCase()}|${p.priceCents}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**
@@ -176,9 +230,11 @@ export async function runFlyerScan(householdId: string): Promise<FlyerScanResult
       started_at: startedAt,
       finished_at: new Date().toISOString(),
       targets_requested: result.targetsRequested,
-      targets_matched: result.status === "COMPLETE" ? result.observations.length : 0,
+      targets_matched:
+        result.status === "COMPLETE" ? result.observations.length + result.onlineStored : 0,
       prices_found: result.status === "COMPLETE" ? result.stored : 0,
-      products_scanned: result.status === "COMPLETE" ? result.observations.length : 0,
+      products_scanned:
+        result.status === "COMPLETE" ? result.observations.length + result.onlineStored : 0,
       error: result.status === "FAILED" ? `${result.reason}: ${result.message}` : null,
     });
     return result;
@@ -201,8 +257,8 @@ export async function runFlyerScan(householdId: string): Promise<FlyerScanResult
     });
   }
 
-  const { deals, failures, lastError } = await collectDeals(
-    targets.map((t) => t.query),
+  const { dealGroups, onlineGroups, failures, lastError } = await collectDeals(
+    targets,
     location.postalCode,
   );
 
@@ -216,17 +272,25 @@ export async function runFlyerScan(householdId: string): Promise<FlyerScanResult
   }
 
   const observedAt = new Date().toISOString();
+  const catalogById = new Map(catalog.map((p) => [p.id, p]));
   const summary = buildFlyerObservations({
-    deals: dedupe(deals),
+    groups: dealGroups,
     retailers,
-    catalog,
+    catalogById,
     today: todayISO(),
+    observedAt,
+  });
+  const onlineSummary = buildOnlineObservations({
+    groups: onlineGroups,
+    retailers,
+    catalogById,
     observedAt,
   });
 
   let stored = 0;
-  if (summary.observations.length > 0) {
-    const rows = summary.observations.map((o) => ({
+  const allObservations = [...summary.observations, ...onlineSummary.observations];
+  if (allObservations.length > 0) {
+    const rows = allObservations.map((o) => ({
       household_id: householdId,
       catalog_product_id: o.catalogProductId,
       retailer_id: o.retailerId,
@@ -284,5 +348,8 @@ export async function runFlyerScan(householdId: string): Promise<FlyerScanResult
     totalTargets: allTargets.length,
     stored,
     ...summary,
+    onlineSeen: onlineSummary.seen,
+    onlineStored: onlineSummary.observations.length,
+    skippedFreshCategory: onlineSummary.skippedFreshCategory,
   });
 }

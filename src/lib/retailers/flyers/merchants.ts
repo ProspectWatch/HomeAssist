@@ -11,7 +11,9 @@
  * skipped, never quietly attached to the nearest-sounding store.
  */
 
-export type KnownRetailer = { id: string; name: string };
+export type RetailerKind = "STORE" | "ONLINE";
+
+export type KnownRetailer = { id: string; name: string; kind: RetailerKind };
 
 /** Case, punctuation and possessives removed; spacing collapsed. Enough to
  *  match "Farm Boy" to "Farm Boy" and "Marilu's Market" to "Marilus Market"
@@ -40,4 +42,10 @@ export function resolveMerchant(
   merchantName: string,
 ): KnownRetailer | null {
   return index.get(normalizeMerchant(merchantName)) ?? null;
+}
+
+/** Physical stores the household shops at — the only ones a flyer deal is
+ *  useful from. */
+export function storeRetailers(retailers: KnownRetailer[]): KnownRetailer[] {
+  return retailers.filter((r) => r.kind === "STORE");
 }

@@ -4,16 +4,17 @@ import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { bestPricesFromRows } from "@/lib/data/deals";
 import { getPriceBookRows } from "@/lib/data/price-book";
 import { getStores } from "@/lib/data/stores";
-import { getLastFlyerScan, getLiveDeals } from "@/lib/data/flyer-deals";
+import { getLastFlyerScan, getLiveDeals, getOnlinePrices } from "@/lib/data/flyer-deals";
 import type { PriceBookEntry } from "@/lib/pricing/price-book";
 import { DealsView } from "./deals-view";
 
 export default async function DealsPage() {
   const householdId = await getCurrentHouseholdId();
-  const [rows, stores, liveDeals, lastScan] = await Promise.all([
+  const [rows, stores, liveDeals, onlinePrices, lastScan] = await Promise.all([
     getPriceBookRows(householdId),
     getStores(),
     getLiveDeals(householdId),
+    getOnlinePrices(householdId),
     getLastFlyerScan(householdId),
   ]);
 
@@ -31,6 +32,7 @@ export default async function DealsPage() {
       bestPrices={bestPricesFromRows(rows)}
       stores={stores}
       liveDeals={liveDeals}
+      onlinePrices={onlinePrices}
       lastScan={lastScan}
     />
   );

@@ -95,7 +95,8 @@ export type FlyerScanActionResult = ActionResult & {
 };
 
 /**
- * Scans this week's flyers for the household's own products.
+ * Checks this week's flyers and the retailers' website prices for the
+ * household's own products.
  *
  * Reports what actually happened, including the parts that didn't work: a
  * scan that saw 300 deals and could place 4 says so, because "4 deals found"
@@ -120,13 +121,18 @@ export async function scanFlyerDeals(): Promise<FlyerScanActionResult> {
         : `${result.targetsRequested} product${result.targetsRequested === 1 ? "" : "s"} searched`;
     const parts = [
       coverage,
-      `${result.seen} flyer deal${result.seen === 1 ? "" : "s"} seen`,
-      `${placed} matched to your list`,
+      `${result.seen} flyer deals · ${result.onlineSeen} website prices seen`,
+      `${placed + result.onlineStored} matched to your list`,
     ];
     const skipped = [
-      result.skippedUnknownMerchant > 0 ? `${result.skippedUnknownMerchant} at stores you don't shop` : null,
+      result.skippedUnknownMerchant > 0
+        ? `${result.skippedUnknownMerchant} flyer deals at stores you don't shop`
+        : null,
       result.skippedUnmatched > 0 ? `${result.skippedUnmatched} we couldn't identify` : null,
       result.skippedExpired > 0 ? `${result.skippedExpired} expired` : null,
+      result.skippedFreshCategory > 0
+        ? `${result.skippedFreshCategory} fresh-food website listings (flyers cover those)`
+        : null,
     ].filter((p): p is string => !!p);
 
     return {

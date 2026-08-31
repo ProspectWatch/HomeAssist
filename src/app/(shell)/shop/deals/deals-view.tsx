@@ -41,17 +41,88 @@ function formatDeadline(validUntil: string | null): string | null {
   return `ends ${end.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })}`;
 }
 
+function DealCard({ deal }: { deal: LiveDeal }) {
+  const deadline = formatDeadline(deal.validUntil);
+              const strong = deal.verdict?.code === "BEST_EVER" || deal.verdict?.code === "GOOD";
+  return (
+                <div
+                  key={deal.id}
+                  className={`flex gap-3 rounded-(--radius-md) border bg-white p-3 shadow-(--shadow-card) ${
+                    strong ? "border-green" : "border-line"
+                  }`}
+                >
+                  <ProductImage
+                    src={deal.imageReady ? deal.imageUrl : null}
+                    alt={deal.name}
+                    height={52}
+                    category={deal.category}
+                    className="w-13 shrink-0 overflow-hidden rounded-(--radius-sm) border border-line"
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold">{deal.name}</div>
+                        {/* The flyer's own wording, so a mis-match is visible
+                            rather than hidden behind our catalogue name. */}
+                        {deal.rawName ? (
+                          <div className="truncate text-[11px] text-muted2">{deal.rawName}</div>
+                        ) : null}
+                      </div>
+                      {deal.isRegularBuy ? <Badge variant="oak">Regular</Badge> : null}
+                    </div>
+
+                    <div className="flex flex-wrap items-baseline gap-x-2 text-[11.5px]">
+                      <span className="text-sm font-semibold text-green">{formatCents(deal.priceCents)}</span>
+                      {deal.regularPriceCents && deal.regularPriceCents > deal.priceCents ? (
+                        <span className="text-muted2 line-through">{formatCents(deal.regularPriceCents)}</span>
+                      ) : null}
+                      <span className="text-muted">
+                        {deal.retailerName ?? "Store not identified"}
+                        {deadline ? ` · ${deadline}` : ""}
+                      </span>
+                    </div>
+
+                    {deal.promotionText ? (
+                      <div className="text-[11px] font-semibold text-oak">{deal.promotionText}</div>
+                    ) : null}
+
+                    {deal.verdict ? (
+                      <p className="text-[11px] leading-relaxed text-muted">
+                        <span className="font-semibold text-ink">{deal.verdict.headline}.</span>{" "}
+                        {deal.verdict.detail}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted2">
+                        No price history for this yet — nothing to compare it against.
+                      </p>
+                    )}
+
+                    {/* Flyers advertise several products under one price
+                        ("CARROTS OR YELLOW ONIONS"). Say so rather than
+                        presenting one reading of the offer as a fact. */}
+                    {deal.isMultiItemOffer ? (
+                      <p className="text-[10.5px] text-muted2">
+                        This flyer offer covers more than one product — check the wording above before counting on it.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+  );
+}
+
 export function DealsView({
   book,
   bestPrices,
   stores,
   liveDeals,
+  onlinePrices,
   lastScan,
 }: {
   book: Record<string, PriceBookEntry>;
   bestPrices: BestPrice[];
   stores: Store[];
   liveDeals: LiveDeal[];
+  onlinePrices: LiveDeal[];
   lastScan: { finishedAt: string; status: string; pricesFound: number; error: string | null } | null;
 }) {
   const { products, loading } = useCatalog();
@@ -124,7 +195,7 @@ export function DealsView({
           <div className="min-w-0 text-[11.5px] text-muted">
             {lastScan ? (
               <>
-                Flyers checked{" "}
+                Prices checked{" "}
                 <span className="font-semibold text-ink">
                   {new Date(lastScan.finishedAt).toLocaleString("en-CA", {
                     month: "short",
@@ -135,7 +206,7 @@ export function DealsView({
                 </span>
               </>
             ) : (
-              "Flyers haven't been checked yet"
+              "Prices haven't been checked yet"
             )}
           </div>
           <button
@@ -145,7 +216,7 @@ export function DealsView({
             className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11.5px] font-semibold text-ink disabled:opacity-50"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} aria-hidden="true" />
-            {scanning ? "Checking…" : "Check flyers"}
+            {scanning ? "Checking…" : "Check prices"}
           </button>
         </div>
         {scanNote ? <p className="mt-1.5 text-[11px] leading-relaxed text-muted2">{scanNote}</p> : null}
@@ -161,82 +232,32 @@ export function DealsView({
             description={
               lastScan
                 ? "Nothing in this week's flyers matched the products you buy. Check again after the new flyers land — most drop Thursday."
-                : "Tap Check flyers to search this week's flyers at your stores for the things you actually buy."
+                : "Tap Check prices to search this week's flyers and the retailers' websites for the things you actually buy."
             }
           />
         ) : (
           <div className="flex flex-col gap-2">
-            {liveDeals.map((deal) => {
-              const deadline = formatDeadline(deal.validUntil);
-              const strong = deal.verdict?.code === "BEST_EVER" || deal.verdict?.code === "GOOD";
-              return (
-                <div
-                  key={deal.id}
-                  className={`flex gap-3 rounded-(--radius-md) border bg-white p-3 shadow-(--shadow-card) ${
-                    strong ? "border-green" : "border-line"
-                  }`}
-                >
-                  <ProductImage
-                    src={deal.imageReady ? deal.imageUrl : null}
-                    alt={deal.name}
-                    height={52}
-                    category={deal.category}
-                    className="w-13 shrink-0 overflow-hidden rounded-(--radius-sm) border border-line"
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold">{deal.name}</div>
-                        {/* The flyer's own wording, so a mis-match is visible
-                            rather than hidden behind our catalogue name. */}
-                        {deal.rawName ? (
-                          <div className="truncate text-[11px] text-muted2">{deal.rawName}</div>
-                        ) : null}
-                      </div>
-                      {deal.isRegularBuy ? <Badge variant="oak">Regular</Badge> : null}
-                    </div>
-
-                    <div className="flex flex-wrap items-baseline gap-x-2 text-[11.5px]">
-                      <span className="text-sm font-semibold text-green">{formatCents(deal.priceCents)}</span>
-                      {deal.regularPriceCents && deal.regularPriceCents > deal.priceCents ? (
-                        <span className="text-muted2 line-through">{formatCents(deal.regularPriceCents)}</span>
-                      ) : null}
-                      <span className="text-muted">
-                        {deal.retailerName ?? "Store not identified"}
-                        {deadline ? ` · ${deadline}` : ""}
-                      </span>
-                    </div>
-
-                    {deal.promotionText ? (
-                      <div className="text-[11px] font-semibold text-oak">{deal.promotionText}</div>
-                    ) : null}
-
-                    {deal.verdict ? (
-                      <p className="text-[11px] leading-relaxed text-muted">
-                        <span className="font-semibold text-ink">{deal.verdict.headline}.</span>{" "}
-                        {deal.verdict.detail}
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-muted2">
-                        No price history for this yet — nothing to compare it against.
-                      </p>
-                    )}
-
-                    {/* Flyers advertise several products under one price
-                        ("CARROTS OR YELLOW ONIONS"). Say so rather than
-                        presenting one reading of the offer as a fact. */}
-                    {deal.isMultiItemOffer ? (
-                      <p className="text-[10.5px] text-muted2">
-                        This flyer offer covers more than one product — check the wording above before counting on it.
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
+            {liveDeals.map((deal) => (
+              <DealCard key={deal.id} deal={deal} />
+            ))}
           </div>
         )}
       </section>
+
+      {/* ---- Website prices ---- */}
+      {onlinePrices.length > 0 ? (
+        <section className="mx-5 mb-3.5">
+          <h2 className="mb-0.5 font-serif text-base font-semibold">Online right now</h2>
+          <p className="mb-1.5 text-[11.5px] text-muted">
+            Website prices, not advertised sales — and you can order these wherever you live.
+          </p>
+          <div className="flex flex-col gap-2">
+            {onlinePrices.map((deal) => (
+              <DealCard key={deal.id} deal={deal} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* ---- Price check ---- */}
       <section className="mx-5 mb-3.5 rounded-(--radius-lg) border border-line bg-white p-3.5 shadow-(--shadow-card)">
