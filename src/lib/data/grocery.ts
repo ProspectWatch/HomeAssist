@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getHouseholdPreferences, resolvePreferenceForCatalogProduct } from "@/lib/data/catalog";
+import { buildBrandVariants, variantsForListItem } from "@/lib/shopping/variants";
 
 export type GroceryItem = {
   id: string;
@@ -18,6 +19,19 @@ export type GroceryItem = {
    * but stay unset until real price observations exist (Phase 2C scope).
    */
   preferredMatchLabel: string | null;
+  /**
+   * The flavours chosen for this line, e.g. Nacho Cheese. Per-trip, and empty
+   * for almost everything — most items have no flavour worth stating.
+   */
+  variants: string[];
+  /**
+   * The flavours this household actually buys under this item's brand, taken
+   * from its own products. Empty unless it owns more than one, because one
+   * flavour is not a choice.
+   */
+  flavourOptions: string[];
+  /** The brand those flavours belong to, for labelling the picker. */
+  flavourBrand: string | null;
 };
 
 type GroceryRow = {
@@ -30,23 +44,37 @@ type GroceryRow = {
   retailer: { name: string } | null;
   catalog_product_id: string | null;
   catalog_product: { category: string; subcategory: string | null } | null;
+  variants: string[] | null;
 };
 
 export async function getGroceryItems(householdId: string | null): Promise<GroceryItem[]> {
   if (!householdId) return [];
   try {
     const supabase = await createClient();
-    const [{ data, error }, preferences] = await Promise.all([
+    const [{ data, error }, preferences, { data: owned }] = await Promise.all([
       supabase
         .from("grocery_items")
         .select(
-          "id, name, qty, category, checked, has_deal, retailer:retailers(name), catalog_product_id, catalog_product:catalog_products(category, subcategory)",
+          "id, name, qty, category, checked, has_deal, retailer:retailers(name), catalog_product_id, catalog_product:catalog_products(category, subcategory), variants",
         )
         .eq("household_id", householdId)
         .order("created_at", { ascending: true }),
       getHouseholdPreferences(householdId),
+      // The household's own branded products are where the flavour choices
+      // come from. Nothing is invented: if this house has only ever recorded
+      // one kind of Doritos, the list offers no choice.
+      supabase
+        .from("products")
+        .select("brand, title, catalog_product_id")
+        .eq("household_id", householdId),
     ]);
     if (error || !data) return [];
+
+    const brands = buildBrandVariants(
+      ((owned ?? []) as { brand: string | null; title: string; catalog_product_id: string | null }[]).map(
+        (row) => ({ brand: row.brand, title: row.title, catalogProductId: row.catalog_product_id }),
+      ),
+    );
 
     return (data as unknown as GroceryRow[]).map((row) => {
       const pref =
@@ -57,6 +85,10 @@ export async function getGroceryItems(householdId: string | null): Promise<Groce
               subcategory: row.catalog_product.subcategory,
             })
           : null;
+      const flavours = variantsForListItem(
+        { name: row.name, catalogProductId: row.catalog_product_id },
+        brands,
+      );
       return {
         id: row.id,
         name: row.name,
@@ -68,6 +100,9 @@ export async function getGroceryItems(householdId: string | null): Promise<Groce
         preferredMatchLabel: pref
           ? [pref.preferred_brand, pref.preferred_variant].filter(Boolean).join(" · ") || pref.label
           : null,
+        variants: row.variants ?? [],
+        flavourOptions: flavours?.variants ?? [],
+        flavourBrand: flavours?.brand ?? null,
       };
     });
   } catch {

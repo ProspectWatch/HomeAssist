@@ -205,3 +205,29 @@ describe("parseRecipeFromHtml", () => {
     expect(result.ok === false && result.message).toContain("Mystery Stew");
   });
 });
+
+describe("recipeYield given more than one way", () => {
+  it("keeps the most informative phrase rather than joining them", () => {
+    // Caldo Verde publishes ["6", "6 (2 cups each)"]; joining produced the
+    // nonsense "6, 6 (2 cups each)" on the live recipe.
+    const html = page({
+      "@type": "Recipe",
+      name: "Caldo Verde",
+      recipeYield: ["6", "6 (2 cups each)"],
+      recipeIngredient: ["1/4 cup olive oil"],
+    });
+    const result = parseRecipeFromHtml(html, "https://example.com/caldo");
+    expect(result.ok && result.recipe.servings).toBe("6 (2 cups each)");
+  });
+
+  it("still reads a plain string yield", () => {
+    const html = page({
+      "@type": "Recipe",
+      name: "Soup",
+      recipeYield: "4 servings",
+      recipeIngredient: ["water"],
+    });
+    const result = parseRecipeFromHtml(html, "https://example.com/soup");
+    expect(result.ok && result.recipe.servings).toBe("4 servings");
+  });
+});

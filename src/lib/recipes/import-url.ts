@@ -13,6 +13,8 @@
  * discovered at the stove.
  */
 
+import { decodeEntities } from "@/lib/recipes/ingredient-match";
+
 export type ImportedRecipe = {
   name: string;
   timeMinutes: number | null;
@@ -154,6 +156,22 @@ function textOf(value: unknown): string | null {
   return null;
 }
 
+/**
+ * The yield, as one phrase.
+ *
+ * schema.org lets recipeYield be an array, and sites use it to give the same
+ * quantity more than one way: Caldo Verde publishes ["6", "6 (2 cups each)"],
+ * which textOf's comma-join turned into the nonsense "6, 6 (2 cups each)".
+ * They are alternatives, not parts, so the most informative one wins and the
+ * rest are dropped.
+ */
+function yieldOf(value: unknown): string | null {
+  if (!Array.isArray(value)) return textOf(value);
+  const parts = value.map(textOf).filter((v): v is string => !!v);
+  if (parts.length === 0) return null;
+  return parts.reduce((best, part) => (part.length > best.length ? part : best));
+}
+
 function ingredientList(value: unknown): string[] {
   const raw = Array.isArray(value) ? value : value ? [value] : [];
   const seen = new Set<string>();
@@ -161,8 +179,10 @@ function ingredientList(value: unknown): string[] {
   for (const entry of raw) {
     const text = textOf(entry);
     if (!text) continue;
-    // Collapse the whitespace and non-breaking spaces recipe sites are full of.
-    const clean = text.replace(/ /g, " ").replace(/\s+/g, " ").trim();
+    // Collapse the whitespace and non-breaking spaces recipe sites are full of,
+    // and decode the HTML entities that survive JSON-LD — a real imported
+    // line read "Portugal&#39;s yellow potatoes" until this was added.
+    const clean = decodeEntities(text).replace(/ /g, " ").replace(/\s+/g, " ").trim();
     if (!clean) continue;
     const key = clean.toLowerCase();
     if (seen.has(key)) continue;
@@ -208,7 +228,7 @@ export function parseRecipeFromHtml(html: string, sourceUrl: string): ImportResu
         parseIsoDuration(node.totalTime) ??
         parseIsoDuration(node.cookTime) ??
         parseIsoDuration(node.prepTime),
-      servings: textOf(node.recipeYield),
+      servings: yieldOf(node.recipeYield),
       ingredients,
       sourceUrl,
     },

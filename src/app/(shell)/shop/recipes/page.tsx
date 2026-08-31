@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ChefHat } from "lucide-react";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -42,8 +43,20 @@ export default async function RecipesPage() {
               href={`/shop/recipes/${recipe.id}`}
               className="flex gap-3 overflow-hidden rounded-(--radius-lg) border border-line bg-white shadow-(--shadow-card)"
             >
-              <div className="flex h-24 w-24 shrink-0 items-center justify-center bg-cream">
-                <ChefHat className="h-7 w-7 text-muted2" aria-hidden="true" />
+              <div className="relative h-24 w-24 shrink-0 bg-cream">
+                {recipe.cover_image_url ? (
+                  <Image
+                    src={recipe.cover_image_url}
+                    alt={recipe.name}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center">
+                    <ChefHat className="h-7 w-7 text-muted2" aria-hidden="true" />
+                  </div>
+                )}
               </div>
               <div className="min-w-0 flex-1 py-3 pr-3.5">
                 <div className="font-serif text-[15px] font-semibold">{recipe.name}</div>

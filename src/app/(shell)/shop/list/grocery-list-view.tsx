@@ -9,16 +9,23 @@ import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { CollapsibleSection, useSectionState } from "@/components/ui/collapsible-section";
+import { FlavourPicker } from "@/components/shop/flavour-picker";
 import { storeBadge } from "@/lib/assets";
 import type { GroceryItem } from "@/lib/data/grocery";
 import type { CatalogProduct } from "@/lib/data/catalog";
 import { CATEGORY_LABEL, CATEGORY_ORDER, mapCatalogCategoryToGroceryCategory } from "@/lib/grocery-categories";
-import { addGroceryItem, clearPurchasedItems, toggleGroceryItem } from "./actions";
+import {
+  addGroceryItem,
+  clearPurchasedItems,
+  setGroceryItemVariants,
+  toggleGroceryItem,
+} from "./actions";
 
 type ListTab = "all" | "tobuy" | "purchased";
 
 export function GroceryListView({ items }: { items: GroceryItem[] }) {
   const [tab, setTab] = React.useState<ListTab>("all");
+  const [flavourFor, setFlavourFor] = React.useState<GroceryItem | null>(null);
   const [, startTransition] = React.useTransition();
   const router = useRouter();
   const showToast = useToast();
@@ -70,6 +77,17 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
     });
   }
 
+  function submitVariants(id: string, variants: string[]) {
+    startTransition(async () => {
+      const res = await setGroceryItemVariants(id, variants);
+      if (!res.ok) showToast(res.message);
+      else {
+        setFlavourFor(null);
+        router.refresh();
+      }
+    });
+  }
+
   function submitClear() {
     startTransition(async () => {
       const res = await clearPurchasedItems();
@@ -89,7 +107,12 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
 
       <ShopTabs current="/shop/list" />
 
+      {/* Named, not just implied. A search-shaped box at the top of a list
+          reads as "filter this list" unless something says otherwise. */}
       <div className="mb-3 px-5">
+        <div className="mb-1 text-[11px] font-semibold tracking-[0.09em] text-oak uppercase">
+          Add an item
+        </div>
         <ProductPicker placeholder="What do we need?" onSelect={submitAddProduct} onCustom={submitAddCustom} />
       </div>
 
@@ -152,6 +175,19 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
                         {item.preferredMatchLabel ? (
                           <div className="mt-0.5 text-[10.5px] text-oak">Preferred: {item.preferredMatchLabel}</div>
                         ) : null}
+                        {/* Offered only where this house owns more than one
+                            flavour of the brand, or has already picked one. */}
+                        {item.flavourOptions.length > 0 || item.variants.length > 0 ? (
+                          <button
+                            type="button"
+                            onClick={() => setFlavourFor(item)}
+                            className="mt-1 cursor-pointer text-[11px] font-semibold text-oak underline decoration-dotted underline-offset-2"
+                          >
+                            {item.variants.length > 0
+                              ? item.variants.join(", ")
+                              : "Choose flavour"}
+                          </button>
+                        ) : null}
                       </div>
                       {item.has_deal ? (
                         <span className="rounded-[6px] bg-green px-2 py-[3px] text-[10px] font-semibold text-white">
@@ -174,6 +210,20 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
           ))}
         </div>
       )}
+
+      <FlavourPicker
+        // A fresh sheet per item, seeded from that item's current choice.
+        key={flavourFor?.id ?? "none"}
+        open={flavourFor !== null}
+        itemName={flavourFor?.name ?? ""}
+        brand={flavourFor?.flavourBrand ?? null}
+        options={flavourFor?.flavourOptions ?? []}
+        selected={flavourFor?.variants ?? []}
+        onClose={() => setFlavourFor(null)}
+        onSave={(variants) => {
+          if (flavourFor) submitVariants(flavourFor.id, variants);
+        }}
+      />
 
       {purchasedCount > 0 ? (
         <div className="mt-4.5 px-5">

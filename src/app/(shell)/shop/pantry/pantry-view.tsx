@@ -3,12 +3,10 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { HeroImage } from "@/components/ui/hero-image";
 import { ProductImage } from "@/components/ui/product-image";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ProductPicker } from "@/components/catalog/product-picker";
@@ -30,6 +28,7 @@ import {
 import { ProductPhotoButton } from "@/components/pantry/product-photo-button";
 import { CollapsibleSection, useSectionState } from "@/components/ui/collapsible-section";
 import { FavouriteButton } from "@/components/ui/favourite-button";
+import { AddItemBar } from "@/components/ui/add-item-bar";
 
 const ALL = "All";
 const STATUS_FILTERS = ["All", "In Stock", "Low", "Out", "Unknown", "On List"] as const;
@@ -197,16 +196,16 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
       </div>
       <ShopTabs current="/shop/pantry" />
 
-      <div className="mb-3 flex gap-2 px-5">
+      <div className="mb-2 px-5">
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search regular buys"
-          className="flex-1"
         />
-        <Button size="icon" onClick={() => setAddOpen(true)} aria-label="Add to Pantry">
-          <Plus className="h-4 w-4" />
-        </Button>
+      </div>
+
+      <div className="mb-3 px-5">
+        <AddItemBar label="Add an item to Pantry" onClick={() => setAddOpen(true)} />
       </div>
 
       <div className="mb-3 px-5">
@@ -264,7 +263,7 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
             title={items.length === 0 ? "No regular buys yet" : "Nothing matches"}
             description={
               items.length === 0
-                ? "Tap + above to add a staple you always keep on hand."
+                ? "Use Add an item above for a staple you always keep on hand."
                 : "Try a different search, status or category."
             }
           />
