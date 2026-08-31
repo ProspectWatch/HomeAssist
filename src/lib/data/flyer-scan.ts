@@ -35,13 +35,24 @@ import type { ScanTarget } from "@/lib/retailers/ingestion";
  * household and must not behave like a crawler.
  */
 
-/** How many products one scan will look up. Enough to cover a week's list and
- *  the regular buys that matter, small enough to stay a polite guest. */
-const MAX_TARGETS = 30;
+/** Ceiling on how many products one scan will look up. The wall-clock budget
+ *  below is the real limit; this just bounds a household with a huge list. */
+const MAX_TARGETS = 60;
 /** Requests in flight at once. */
-const BATCH_SIZE = 6;
+const BATCH_SIZE = 8;
 /** Pause between batches. */
-const BATCH_PAUSE_MS = 400;
+const BATCH_PAUSE_MS = 300;
+/**
+ * How long the scan may spend searching before it stops asking for more.
+ *
+ * Responses run to a few hundred KB and a slow one takes seconds, so the
+ * number of products reachable in a run is not predictable in advance. The
+ * serverless function is capped at 60s, and a run that overruns stores
+ * nothing at all — every price found is thrown away. Stopping early with a
+ * partial, honestly-reported result is strictly better, and the summary
+ * already says how many of the household's products were reached.
+ */
+const SEARCH_BUDGET_MS = 38_000;
 
 export type FlyerScanResult =
   | ({
@@ -96,14 +107,23 @@ async function collectDeals(
   onlineGroups: ResultGroup<OnlinePrice>[];
   failures: number;
   lastError: AdapterError | null;
+  /** Products actually reached before the time budget ran out. */
+  searched: number;
 }> {
   const dealGroups: ResultGroup<FlyerDeal>[] = [];
   const onlineGroups: ResultGroup<OnlinePrice>[] = [];
   let failures = 0;
   let lastError: AdapterError | null = null;
 
+  const deadline = Date.now() + SEARCH_BUDGET_MS;
+  let searched = 0;
+
   for (let i = 0; i < targets.length; i += BATCH_SIZE) {
+    // Checked before dispatching, never mid-flight: results already paid for
+    // are always kept.
+    if (Date.now() > deadline) break;
     const batch = targets.slice(i, i + BATCH_SIZE);
+    searched += batch.length;
     const results = await Promise.all(
       batch.map(async (target) => {
         try {
@@ -139,7 +159,7 @@ async function collectDeals(
     if (i + BATCH_SIZE < targets.length) await sleep(BATCH_PAUSE_MS);
   }
 
-  return { dealGroups, onlineGroups, failures, lastError };
+  return { dealGroups, onlineGroups, failures, lastError, searched };
 }
 
 /** Website prices repeat across search terms just as flyer deals do. */
@@ -257,12 +277,12 @@ export async function runFlyerScan(householdId: string): Promise<FlyerScanResult
     });
   }
 
-  const { dealGroups, onlineGroups, failures, lastError } = await collectDeals(
+  const { dealGroups, onlineGroups, failures, lastError, searched } = await collectDeals(
     targets,
     location.postalCode,
   );
 
-  if (failures === targets.length) {
+  if (searched > 0 && failures === searched) {
     return finish({
       status: "FAILED",
       reason: lastError?.reason ?? "UNKNOWN",
@@ -344,7 +364,7 @@ export async function runFlyerScan(householdId: string): Promise<FlyerScanResult
 
   return finish({
     status: "COMPLETE",
-    targetsRequested: targets.length,
+    targetsRequested: searched,
     totalTargets: allTargets.length,
     stored,
     ...summary,
