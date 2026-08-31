@@ -13,6 +13,9 @@ export function AddRecipeButton({ screenshotAvailable }: { screenshotAvailable: 
         Add a recipe
       </Button>
       <RecipeImport
+        // A fresh sheet each time it opens, rather than one that has to clean
+        // up after itself in an effect.
+        key={open ? "open" : "closed"}
         open={open}
         onClose={() => setOpen(false)}
         screenshotAvailable={screenshotAvailable}

@@ -28,15 +28,13 @@ export function DietaryEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [allergies, setAllergies] = React.useState("");
-  const [dislikes, setDislikes] = React.useState("");
+  // Seeded from the person once, on mount. Callers pass a key so a different
+  // person remounts this rather than being copied in by an effect — resetting
+  // form state from a prop is what `key` is for.
+  const [allergies, setAllergies] = React.useState(person?.allergies.join(", ") ?? "");
+  const [dislikes, setDislikes] = React.useState(person?.dislikes.join(", ") ?? "");
   const [pending, startTransition] = React.useTransition();
   const showToast = useToast();
-
-  React.useEffect(() => {
-    setAllergies(person?.allergies.join(", ") ?? "");
-    setDislikes(person?.dislikes.join(", ") ?? "");
-  }, [person]);
 
   function save() {
     if (!person) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 /**
  * A section of a long list that can be folded away.
@@ -18,40 +18,66 @@ import { useEffect, useState } from "react";
  * block site data throws on read rather than returning empty.
  */
 
-function readOpenState(storageKey: string): Record<string, boolean> | null {
+const EMPTY: Record<string, boolean> = {};
+
+/**
+ * The stored open/closed map for one screen, cached so that repeated reads
+ * return the same object.
+ *
+ * useSyncExternalStore compares snapshots by identity, so parsing the JSON
+ * afresh on every render would hand it a new object each time and spin. The
+ * cache is invalidated by the writer below, which is the only thing that
+ * changes the value.
+ */
+const cache = new Map<string, Record<string, boolean>>();
+const listeners = new Map<string, Set<() => void>>();
+
+function readOpenState(storageKey: string): Record<string, boolean> {
+  const hit = cache.get(storageKey);
+  if (hit) return hit;
+  let parsed: Record<string, boolean> = EMPTY;
   try {
     const raw = window.localStorage.getItem(storageKey);
-    return raw ? (JSON.parse(raw) as Record<string, boolean>) : null;
+    if (raw) parsed = JSON.parse(raw) as Record<string, boolean>;
   } catch {
-    return null;
+    // A browser set to block site data throws on read rather than returning
+    // empty. Everything renders at its default, which is a working screen.
   }
+  cache.set(storageKey, parsed);
+  return parsed;
+}
+
+function subscribe(storageKey: string, onChange: () => void): () => void {
+  const set = listeners.get(storageKey) ?? new Set();
+  set.add(onChange);
+  listeners.set(storageKey, set);
+  return () => set.delete(onChange);
+}
+
+function writeOpenState(storageKey: string, next: Record<string, boolean>) {
+  cache.set(storageKey, next);
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(next));
+  } catch {
+    // Still toggles for the life of the page; only the memory of it is lost.
+  }
+  for (const listener of listeners.get(storageKey) ?? []) listener();
 }
 
 export function useSectionState(storageKey: string, defaultOpen: boolean) {
-  const [open, setOpen] = useState<Record<string, boolean>>({});
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    setOpen(readOpenState(storageKey) ?? {});
-    setLoaded(true);
-  }, [storageKey]);
+  const open = useSyncExternalStore(
+    (onChange) => subscribe(storageKey, onChange),
+    () => readOpenState(storageKey),
+    // On the server there is no storage, so everything renders at its default
+    // and the first client render matches the HTML that was sent.
+    () => EMPTY,
+  );
 
   function toggle(id: string) {
-    setOpen((prev) => {
-      const next = { ...prev, [id]: !(prev[id] ?? defaultOpen) };
-      try {
-        window.localStorage.setItem(storageKey, JSON.stringify(next));
-      } catch {
-        // A browser that refuses to store this still gets a working toggle for
-        // the life of the page; only the memory of it is lost.
-      }
-      return next;
-    });
+    writeOpenState(storageKey, { ...open, [id]: !(open[id] ?? defaultOpen) });
   }
 
-  // Before the stored state is read, everything renders at its default. This
-  // avoids a flash of the wrong shape on first paint.
-  const isOpen = (id: string) => (loaded ? (open[id] ?? defaultOpen) : defaultOpen);
+  const isOpen = (id: string) => open[id] ?? defaultOpen;
   return { isOpen, toggle };
 }
 

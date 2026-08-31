@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,7 @@ import type { HouseholdSettings } from "@/lib/data/settings";
 import type { Store } from "@/lib/data/stores";
 import { saveHouseholdSettings } from "./actions";
 import { signOut } from "@/lib/actions/auth-actions";
-import { addHouseholdPerson, removeHouseholdPerson } from "@/lib/actions/people-actions";
 import { buildJoinLink, type HouseholdPerson } from "@/lib/household/people";
-import { DietaryEditor } from "@/components/household/dietary-editor";
 
 const RADIUS_LABELS: { key: string; label: string }[] = [
   { key: "grocery", label: "Grocery Radius" },
@@ -153,127 +152,30 @@ export function SettingsView({
  * shopping is for them, and attribution needs a name to point at.
  */
 function PeopleSection({ people }: { people: HouseholdPerson[] }) {
-  const [editing, setEditing] = React.useState<HouseholdPerson | null>(null);
-  const [name, setName] = React.useState("");
-  const [isChild, setIsChild] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [pending, startTransition] = React.useTransition();
-  const router = useRouter();
-
-  function add(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const res = await addHouseholdPerson(name, isChild);
-      if (!res.ok) {
-        setError(res.message);
-        return;
-      }
-      setName("");
-      setIsChild(false);
-      router.refresh();
-    });
-  }
-
-  function remove(person: HouseholdPerson) {
-    startTransition(async () => {
-      const res = await removeHouseholdPerson(person.id);
-      if (!res.ok) setError(res.message);
-      else router.refresh();
-    });
-  }
-
+  // One home for people, and it is not here. Two editors for the same data is
+  // its own kind of "I couldn't find it" — this points at the real one and
+  // says enough for the reader to know whether they need to go.
   return (
-    <section className="mt-5">
+    <section className="mb-6">
       <div className="px-5 pb-2 text-[11px] font-semibold tracking-[0.09em] text-oak uppercase">
         Household
       </div>
-
-      {people.length > 0 ? (
-        <div className="mb-2.5 flex flex-col gap-2 px-5">
-          {people.map((person) => (
-            <div
-              key={person.id}
-              className="flex items-center justify-between rounded-(--radius-sm) border border-line bg-white px-3.5 py-2.5 shadow-(--shadow-card)"
-            >
-              <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold text-ink">{person.name}</span>
-                <span className="block text-[11.5px] text-muted">
-                  {person.isChild ? "Child" : "Adult"}
-                  {person.hasLogin ? " · signs in" : ""}
-                </span>
-                {/* Allergies are named, never summarised as a count — the whole
-                    point of recording one is that somebody can see what it is. */}
-                {person.allergies.length > 0 ? (
-                  <span className="mt-0.5 block text-[11.5px] font-semibold text-ink">
-                    Allergic to {person.allergies.join(", ")}
-                  </span>
-                ) : null}
-                {person.dislikes.length > 0 ? (
-                  <span className="block text-[11.5px] text-muted2">
-                    Won&rsquo;t eat {person.dislikes.join(", ")}
-                  </span>
-                ) : null}
-              </span>
-              <span className="ml-2 flex shrink-0 items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setEditing(person)}
-                  className="cursor-pointer text-[12px] font-semibold text-ink"
-                >
-                  Food
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Remove ${person.name}`}
-                  disabled={pending}
-                  onClick={() => remove(person)}
-                  className="cursor-pointer text-[12px] font-semibold text-muted2 disabled:opacity-50"
-                >
-                  Remove
-                </button>
-              </span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mb-2.5 px-5 text-[12.5px] text-muted">
-          Add the people you shop for, so purchases can be attributed to them.
-        </p>
-      )}
-
-      <form onSubmit={add} className="flex flex-col gap-2 px-5">
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Name"
-          maxLength={40}
-        />
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsChild((v) => !v)}
-            className={
-              isChild
-                ? "cursor-pointer rounded-(--radius-sm) border border-ink bg-ink px-3 py-1.5 text-[12px] font-semibold text-white"
-                : "cursor-pointer rounded-(--radius-sm) border border-line bg-white px-3 py-1.5 text-[12px] font-semibold text-ink"
-            }
-          >
-            Child
-          </button>
-          <Button type="submit" size="sm" disabled={pending || name.trim().length === 0}>
-            Add person
-          </Button>
-        </div>
-        {error ? <p className="text-[12.5px] text-[#b5482f]">{error}</p> : null}
-      </form>
-
-      <DietaryEditor
-        person={editing}
-        open={editing !== null}
-        onClose={() => setEditing(null)}
-        onSaved={() => router.refresh()}
-      />
+      <div className="px-5">
+        <Link
+          href="/family"
+          className="flex items-center justify-between rounded-(--radius-md) border border-line bg-white px-4 py-3.5"
+        >
+          <span>
+            <span className="block text-[14px] font-semibold text-ink">Family</span>
+            <span className="block text-[11.5px] text-muted">
+              {people.length === 0
+                ? "Add everyone you cook for"
+                : `${people.length} ${people.length === 1 ? "person" : "people"} · allergies, dislikes, favourite meals`}
+            </span>
+          </span>
+          <ChevronRight className="h-4 w-4 text-muted2" aria-hidden="true" />
+        </Link>
+      </div>
     </section>
   );
 }
