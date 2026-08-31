@@ -27,6 +27,8 @@ type PreferenceRow = {
   scope_key: string;
   label: string;
   stock_location: string | null;
+  /** This household's own photograph, if someone took one. */
+  image_url: string | null;
   preferred_brand: string | null;
   preferred_variant: string | null;
   preferred_store: string | null;
@@ -81,7 +83,7 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
       supabase
         .from("household_product_preferences")
         .select(
-          "scope_key, label, preferred_brand, preferred_variant, preferred_store, stock_location, catalog_product:catalog_products(display_name, category, default_unit, image_url, image_ready)",
+          "scope_key, label, preferred_brand, preferred_variant, preferred_store, stock_location, image_url, catalog_product:catalog_products(display_name, category, default_unit, image_url, image_ready)",
         )
         .eq("household_id", householdId)
         .eq("scope_type", "product")
@@ -155,8 +157,12 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
         inventory_status: inventory.get(row.scope_key) ?? "UNKNOWN",
         on_list: onList(row.scope_key, title),
         stock_location: row.stock_location,
-        // Never show an image the catalogue hasn't marked ready.
-        image_url: catalog?.image_ready ? catalog.image_url : (sku?.image_url ?? null),
+        // The household's own photograph wins: a picture of the jar actually
+        // in this fridge says more than the stock one, and the catalogue image
+        // is shared by every household so it can never be the specific answer.
+        // Falling back, never show an image the catalogue hasn't marked ready.
+        image_url:
+          row.image_url ?? (catalog?.image_ready ? catalog.image_url : (sku?.image_url ?? null)),
         preference_hint: preferenceHint(row),
         retailer_name: sku?.retailer?.name ?? null,
       };

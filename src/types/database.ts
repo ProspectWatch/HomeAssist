@@ -415,6 +415,7 @@ export type Database = {
           created_at: string
           household_id: string
           id: string
+          image_url: string | null
           label: string
           notes: string | null
           preferred_brand: string | null
@@ -436,6 +437,7 @@ export type Database = {
           created_at?: string
           household_id: string
           id?: string
+          image_url?: string | null
           label: string
           notes?: string | null
           preferred_brand?: string | null
@@ -457,6 +459,7 @@ export type Database = {
           created_at?: string
           household_id?: string
           id?: string
+          image_url?: string | null
           label?: string
           notes?: string | null
           preferred_brand?: string | null

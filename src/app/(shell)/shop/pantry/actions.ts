@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
 import type { InventoryStatus } from "@/lib/data/inventory";
 import { resolveNeedMatch, type ActiveListItem, type HouseholdNeed } from "@/lib/household/needs";
+import {
+  buildProductImagePath,
+  productImagePathBelongsToHousehold,
+  productImagePublicUrl,
+  validateProductImage,
+} from "@/lib/products/image-upload";
 
 export async function addPantryRegularBuy(
   title: string,
@@ -160,5 +166,97 @@ export async function addPantryItemToTrip(
     name,
     quantity: qty,
     source: "PANTRY",
+  });
+}
+
+export type PantryImageTarget = { ok: true; storagePath: string } | { ok: false; message: string };
+
+/**
+ * Step 1 of setting a product photo: issue the path the browser uploads to.
+ *
+ * The photo does not travel through this Server Action — a Vercel Function
+ * rejects a body over 4.5 MB and a phone photo clears that routinely, so the
+ * browser uploads to Storage under its own session and hands back the path.
+ * Only the server mints one, because that path's first segment is the
+ * household folder the storage policy checks.
+ */
+export async function preparePantryImageUpload(file: {
+  filename: string;
+  mediaType: string;
+  size: number;
+}): Promise<PantryImageTarget> {
+  const check = validateProductImage({ size: file.size, mediaType: file.mediaType });
+  if (!check.ok) return check;
+
+  const result = await runHouseholdAction<PantryImageTarget>(async (_supabase, householdId) => ({
+    ok: true,
+    storagePath: buildProductImagePath(householdId, file.filename, crypto.randomUUID()),
+  }));
+  // runHouseholdAction widens to ActionResult for its own "not signed in" and
+  // "request failed" cases, both of which are ok: false and pass through here.
+  return "storagePath" in result
+    ? result
+    : { ok: false, message: "Couldn't start that upload — try again." };
+}
+
+/**
+ * Step 2: record an uploaded photo against a pantry item.
+ *
+ * Writes to the household's own layer, never to catalog_products — that row is
+ * shared by every household, and the unique index from 0027 would refuse the
+ * second household to photograph the same product anyway. Your ketchup photo
+ * beats the stock one on your Pantry and changes nothing for anyone else.
+ */
+export async function setPantryImage(item: {
+  catalogProductId?: string | null;
+  productId?: string | null;
+  /** Carried so a preference row created here is labelled, not left blank. */
+  title: string;
+  storagePath: string;
+}): Promise<ActionResult> {
+  return runHouseholdAction(async (supabase, householdId) => {
+    // The browser hands this path back, so it is re-checked before it is
+    // written anywhere it would be rendered. Storage RLS already refused a
+    // write outside the household's folder; this stops an arbitrary string
+    // becoming a product's image_url.
+    if (!productImagePathBelongsToHousehold(item.storagePath, householdId)) {
+      return { ok: false, message: "That photo couldn't be attached — try taking it again." };
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) return { ok: false, message: "Couldn't attach that photo — try again." };
+    const imageUrl = productImagePublicUrl(supabaseUrl, item.storagePath);
+
+    if (item.catalogProductId) {
+      // Upsert rather than update: a pantry row can be catalogue-backed
+      // without a preference row of its own yet, and photographing it is a
+      // reasonable first thing to do to it. `label` is NOT NULL, so a row
+      // created by this path has to carry one — on the update path the
+      // conflict target keeps the label the household already chose.
+      const { error } = await supabase.from("household_product_preferences").upsert(
+        {
+          household_id: householdId,
+          scope_type: "product",
+          scope_key: item.catalogProductId,
+          label: item.title,
+          image_url: imageUrl,
+        },
+        { onConflict: "household_id,scope_type,scope_key" },
+      );
+      if (error) return { ok: false, message: error.message };
+    } else if (item.productId) {
+      const { error } = await supabase
+        .from("products")
+        .update({ image_url: imageUrl })
+        .eq("id", item.productId)
+        .eq("household_id", householdId);
+      if (error) return { ok: false, message: error.message };
+    } else {
+      return { ok: false, message: "Couldn't tell which item that photo belongs to." };
+    }
+
+    revalidatePath("/shop/pantry");
+    revalidatePath("/shop/list");
+    return { ok: true };
   });
 }
