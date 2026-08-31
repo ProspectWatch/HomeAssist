@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
 import { runHouseholdScan } from "@/lib/data/retailer-scan";
 import { runFlyerScan } from "@/lib/data/flyer-scan";
+import { runInstacartScan } from "@/lib/data/instacart-scan";
 import { addHouseholdNeed } from "@/app/(shell)/shop/pantry/actions";
 import { formatCents } from "@/lib/money";
 
@@ -198,4 +199,54 @@ export async function addDealToList(input: {
 
   if (result.ok) revalidatePath("/shop/deals");
   return result;
+}
+
+export type InstacartScanActionResult = ActionResult & { summary?: string; detail?: string };
+
+/**
+ * Checks Marilu's Market prices from its Instacart listing.
+ *
+ * Kept separate from the flyer scan because it is a different kind of source
+ * and should be readable as one: Marilu's publishes no flyer, so nothing else
+ * in the app can see its prices, and what comes back is what Instacart lists
+ * for the store rather than what is on the shelf. The summary says so, and the
+ * observations are stored under their own source type so no comparison can
+ * confuse the two.
+ */
+export async function scanMarilusPrices(): Promise<InstacartScanActionResult> {
+  return runHouseholdAction<InstacartScanActionResult>(async (_supabase, householdId) => {
+    const result = await runInstacartScan(householdId);
+    if (result.status === "FAILED") return { ok: false, message: result.message };
+
+    revalidatePath("/shop/deals");
+    revalidatePath("/price-history");
+    revalidatePath("/home");
+
+    const parts = [
+      `${result.storefrontSeen} featured products read`,
+      `${result.targetsRequested} of your products looked up`,
+      `${result.stored} prices stored`,
+    ];
+    const notes = [
+      result.notStocked > 0 ? `${result.notStocked} aren't carried at Marilu's` : null,
+      result.weightPriced > 0
+        ? `${result.weightPriced} are priced by weight, so they're recorded with their unit rather than as a pack price`
+        : null,
+      result.skippedAmbiguous > 0
+        ? `${result.skippedAmbiguous} couldn't be matched to a product with confidence and were skipped`
+        : null,
+      result.totalTargets > result.targetsRequested
+        ? "Run again to work through the rest — each run picks up where the last left off."
+        : null,
+    ].filter((n): n is string => !!n);
+
+    return {
+      ok: true,
+      summary: parts.join(" · "),
+      detail: [
+        "These are the prices Instacart lists for Marilu's, which may differ from the shelf.",
+        ...notes,
+      ].join(" "),
+    };
+  });
 }

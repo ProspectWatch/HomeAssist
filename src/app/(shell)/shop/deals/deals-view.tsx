@@ -20,7 +20,7 @@ import type { CatalogProduct } from "@/lib/data/catalog";
 import type { Store } from "@/lib/data/stores";
 import type { BestPrice } from "@/lib/data/deals";
 import type { DealGroup } from "@/lib/data/flyer-deals";
-import { addDealToList, logSeenPrice, scanFlyerDeals } from "./actions";
+import { addDealToList, logSeenPrice, scanFlyerDeals, scanMarilusPrices } from "./actions";
 
 const VERDICT_STYLES: Record<PriceVerdictCode, { className: string; icon: typeof TrendingDown }> = {
   BEST_EVER: { className: "border-green bg-green/10 text-ink", icon: TrendingDown },
@@ -243,6 +243,23 @@ export function DealsView({
     });
   }
 
+  // Marilu's is a separate button because it is a separate kind of source: no
+  // flyer exists for it, and what comes back is an Instacart listing rather
+  // than a shelf price. Folding it into "Check prices" would hide both facts.
+  function scanMarilus() {
+    startScan(async () => {
+      const res = await scanMarilusPrices();
+      if (!res.ok) {
+        setScanNote(null);
+        showToast(res.message);
+        return;
+      }
+      setScanNote([res.summary, res.detail].filter(Boolean).join(" "));
+      showToast(res.summary ?? "Marilu's prices checked");
+      router.refresh();
+    });
+  }
+
   function save() {
     if (!picked || priceCents === null) return;
     startTransition(async () => {
@@ -292,6 +309,20 @@ export function DealsView({
           >
             <RefreshCw className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} aria-hidden="true" />
             {scanning ? "Checking…" : "Check prices"}
+          </button>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 border-t border-line pt-2">
+          <div className="min-w-0 text-[11.5px] text-muted">
+            Marilu&rsquo;s has no flyer — its prices come from its Instacart listing
+          </div>
+          <button
+            type="button"
+            onClick={scanMarilus}
+            disabled={scanning}
+            className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11.5px] font-semibold text-ink disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} aria-hidden="true" />
+            {scanning ? "Checking…" : "Check Marilu's"}
           </button>
         </div>
         {scanNote ? <p className="mt-1.5 text-[11px] leading-relaxed text-muted2">{scanNote}</p> : null}
