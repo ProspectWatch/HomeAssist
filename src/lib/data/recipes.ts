@@ -70,17 +70,39 @@ export type RecipeDetail = {
   ingredients: RecipeIngredient[];
 };
 
+/**
+ * Starter recipes this household has removed from its own view.
+ *
+ * RLS scopes the table to the caller's household, so no household filter is
+ * needed here and none is guessed at.
+ */
+export async function getHiddenRecipeIds(): Promise<Set<string>> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.from("household_hidden_recipes").select("recipe_id");
+    return new Set(((data ?? []) as { recipe_id: string }[]).map((r) => r.recipe_id));
+  } catch {
+    return new Set();
+  }
+}
+
+/** How many are hidden, so the list can offer them back. */
+export async function countHiddenRecipes(): Promise<number> {
+  return (await getHiddenRecipeIds()).size;
+}
+
 export async function getRecipes(): Promise<RecipeSummary[]> {
   try {
     const supabase = await createClient();
-    // RLS scopes recipe_images to this household, so no household filter is
-    // needed here and none is guessed at.
-    const [{ data, error }, { data: covers }] = await Promise.all([
+    // RLS scopes recipe_images and the hidden list to this household, so no
+    // household filter is needed here and none is guessed at.
+    const [{ data, error }, { data: covers }, hidden] = await Promise.all([
       supabase
         .from("recipes")
         .select("id, name, time_minutes, servings, recipe_ingredients(usual_retailer_id)")
         .order("name", { ascending: true }),
       supabase.from("recipe_images").select("recipe_id, image_url").eq("is_cover", true),
+      getHiddenRecipeIds(),
     ]);
     if (error || !data) return [];
 
@@ -89,7 +111,7 @@ export async function getRecipes(): Promise<RecipeSummary[]> {
       coverByRecipe.set(row.recipe_id, row.image_url);
     }
     type Row = { id: string; name: string; time_minutes: number | null; servings: string | null; recipe_ingredients: { usual_retailer_id: string | null }[] };
-    return (data as unknown as Row[]).map((r) => ({
+    return (data as unknown as Row[]).filter((r) => !hidden.has(r.id)).map((r) => ({
       id: r.id,
       name: r.name,
       time_minutes: r.time_minutes,

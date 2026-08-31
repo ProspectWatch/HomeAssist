@@ -392,12 +392,44 @@ export async function deleteRecipe(recipeId: string): Promise<ActionResult> {
       .maybeSingle();
     if (error) return { ok: false, message: error.message };
     if (!removed) {
-      return { ok: false, message: "That's one of the shared starter recipes — it can't be deleted." };
+      // A starter recipe: the row belongs to every household and RLS refuses
+      // to delete it, which is right. Removing it from THIS household's view
+      // is a different write and does exactly what was asked without reaching
+      // into anyone else's copy.
+      const { error: hideError } = await supabase
+        .from("household_hidden_recipes")
+        .upsert(
+          { household_id: householdId, recipe_id: recipeId },
+          { onConflict: "household_id,recipe_id", ignoreDuplicates: true },
+        );
+      if (hideError) return { ok: false, message: hideError.message };
+
+      revalidatePath("/shop/recipes");
+      revalidatePath("/shop/plan");
+      revalidatePath("/family");
+      revalidatePath("/home");
+      return { ok: true };
     }
 
     revalidatePath("/shop/recipes");
     revalidatePath("/shop/plan");
+    revalidatePath("/family");
     revalidatePath("/home");
+    return { ok: true };
+  });
+}
+
+/** Puts every removed starter recipe back. */
+export async function restoreHiddenRecipes(): Promise<ActionResult> {
+  return runHouseholdAction(async (supabase, householdId) => {
+    const { error } = await supabase
+      .from("household_hidden_recipes")
+      .delete()
+      .eq("household_id", householdId);
+    if (error) return { ok: false, message: error.message };
+    revalidatePath("/shop/recipes");
+    revalidatePath("/shop/plan");
+    revalidatePath("/family");
     return { ok: true };
   });
 }

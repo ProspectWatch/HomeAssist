@@ -19,6 +19,7 @@ import {
   addIngredientToList,
   addMissingIngredientsToList,
   addRecipeToList,
+  deleteRecipe,
   removeRecipeImage,
   setRecipeCoverImage,
   setRecipeIngredientCatalogProduct,
@@ -44,6 +45,7 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
   const [matchingIngredientId, setMatchingIngredientId] = React.useState<string | null>(null);
   const [viewing, setViewing] = React.useState<RecipePhoto | null>(null);
   const [editing, setEditing] = React.useState(false);
+  const [confirmingRemove, setConfirmingRemove] = React.useState(false);
   const router = useRouter();
   const showToast = useToast();
 
@@ -129,7 +131,49 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
             household, so RLS refuses the write, and a button that always
             fails is worse than no button. */}
         {recipe.is_shared ? (
-          <span className="mt-1 shrink-0 text-[11px] text-muted2">Starter recipe</span>
+          // A starter recipe cannot be edited or deleted — the row is shared
+          // with every household. It can be taken off THIS household's list,
+          // which is what "I don't want this one" actually means.
+          <div className="mt-1 shrink-0 text-right">
+            <div className="text-[11px] text-muted2">Starter recipe</div>
+            {confirmingRemove ? (
+              <div className="mt-1 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => setConfirmingRemove(false)}
+                  className="cursor-pointer text-[11.5px] font-semibold text-muted disabled:opacity-50"
+                >
+                  Keep
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      const res = await deleteRecipe(recipe.id);
+                      if (!res.ok) showToast(res.message);
+                      else {
+                        showToast(`${recipe.name} removed from your recipes`);
+                        router.replace("/shop/recipes");
+                      }
+                    })
+                  }
+                  className="cursor-pointer text-[11.5px] font-semibold text-[#b5482f] disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmingRemove(true)}
+                className="mt-0.5 cursor-pointer text-[12px] font-semibold text-ink"
+              >
+                Remove
+              </button>
+            )}
+          </div>
         ) : (
           <button
             type="button"
