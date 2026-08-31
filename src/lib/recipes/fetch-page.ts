@@ -1,6 +1,7 @@
 import "server-only";
 
 import { checkRecipeUrl } from "./import-url";
+import { refusalMessage } from "./refusal";
 
 /**
  * Fetching a page the user pasted, from the server, safely.
@@ -59,13 +60,7 @@ export async function fetchRecipePage(rawUrl: string): Promise<FetchedPage> {
       }
 
       if (!response.ok) {
-        return {
-          ok: false,
-          message:
-            response.status === 404
-              ? "That page doesn't exist any more."
-              : `That site wouldn't let us read the page (${response.status}). Try a screenshot instead.`,
-        };
+        return { ok: false, message: refusalMessage(response) };
       }
 
       const type = response.headers.get("content-type") ?? "";
