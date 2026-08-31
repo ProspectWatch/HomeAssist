@@ -1,4 +1,5 @@
 import { matchToCatalog, type MatchableCatalogProduct } from "../matching";
+import type { PriceSourceType } from "../source-types";
 import { parsePackageSize } from "../normalization";
 import type { PriceObservationRecord } from "../types";
 import { isCurrentlyValid, promotionText, type FlyerDeal, type OnlinePrice } from "./flipp";
@@ -143,7 +144,7 @@ export function buildFlyerObservations(input: {
       validUntil: deal.validTo,
       availability: null,
       sourceUrl: deal.sourceUrl,
-      sourceType: "FLYER",
+      sourceType: "FLYER" satisfies PriceSourceType,
       matchConfidence: match.confidence,
       matchMethod: match.matchMethod,
       matchStatus: match.status,
@@ -288,7 +289,7 @@ export function buildOnlineObservations(input: {
       validUntil: null,
       availability: null,
       sourceUrl: null,
-      sourceType: "ONLINE",
+      sourceType: "ONLINE" satisfies PriceSourceType,
       matchConfidence: match.confidence,
       matchMethod: match.matchMethod,
       matchStatus: match.status,
