@@ -63,7 +63,7 @@ describe("groupDeals", () => {
     expect(groups[0].name).toBe("Big Gap");
   });
 
-  it("falls back to the flyer's own picture when the catalogue has none", () => {
+  it("uses the flyer's own picture when the catalogue has none", () => {
     const groups = groupDeals([
       offer({ id: "a", priceCents: 488, offerImageUrl: "https://img.example/melon.jpg" }),
     ]);
@@ -71,16 +71,26 @@ describe("groupDeals", () => {
     expect(groups[0].imageReady).toBe(true);
   });
 
-  it("prefers the catalogue's own photograph over a flyer clipping", () => {
+  it("shows the product on offer, not the catalogue's generic stand-in", () => {
+    // Five ketchup offers from different brands all rendered the same Heinz
+    // bottle, because the catalogue image won. On a deal card the flyer's own
+    // clipping is the honest picture: it is the thing actually being sold.
     const groups = groupDeals([
       offer({
         id: "a",
         priceCents: 488,
-        imageUrl: "https://img.example/catalogue.jpg",
+        imageUrl: "https://img.example/heinz.jpg",
         imageReady: true,
-        offerImageUrl: "https://img.example/flyer.jpg",
+        offerImageUrl: "https://img.example/frenchs.jpg",
       }),
     ]);
-    expect(groups[0].imageUrl).toBe("https://img.example/catalogue.jpg");
+    expect(groups[0].imageUrl).toBe("https://img.example/frenchs.jpg");
+  });
+
+  it("falls back to the catalogue photo when the offer has no picture", () => {
+    const groups = groupDeals([
+      offer({ id: "a", priceCents: 488, imageUrl: "https://img.example/cat.jpg", imageReady: true }),
+    ]);
+    expect(groups[0].imageUrl).toBe("https://img.example/cat.jpg");
   });
 });

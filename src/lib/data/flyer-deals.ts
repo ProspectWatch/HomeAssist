@@ -87,10 +87,19 @@ export function groupDeals(deals: LiveDeal[]): DealGroup[] {
       catalogProductId: best.catalogProductId,
       name: best.name,
       category: best.category,
-      // The catalogue photo is preferred; a flyer's own picture stands in
-      // when the catalogue has none, which is most of it today.
-      imageUrl: best.imageReady && best.imageUrl ? best.imageUrl : (sorted.find((o) => o.offerImageUrl)?.offerImageUrl ?? null),
-      imageReady: Boolean(best.imageReady && best.imageUrl) || sorted.some((o) => o.offerImageUrl),
+      // The offer's own picture wins here, and the catalogue's is the
+      // fallback — the opposite of everywhere else in the app.
+      //
+      // A deal card is about one specific product on one specific shelf. The
+      // catalogue image is a generic stand-in for the concept, and using it
+      // meant five different ketchup offers — Heinz, French's, store brand —
+      // all rendered the same Heinz bottle, which says something untrue about
+      // four of them. The flyer's clipping is a picture of the thing actually
+      // being sold.
+      imageUrl: best.offerImageUrl ?? (best.imageReady ? best.imageUrl : null) ??
+        (sorted.find((o) => o.offerImageUrl)?.offerImageUrl ?? null),
+      imageReady: Boolean(best.offerImageUrl) || Boolean(best.imageReady && best.imageUrl) ||
+        sorted.some((o) => o.offerImageUrl),
       isRegularBuy: best.isRegularBuy,
       offers: sorted,
       bestPriceCents: best.priceCents,
