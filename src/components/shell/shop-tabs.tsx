@@ -8,6 +8,7 @@ const TABS = [
   { href: "/shop/regular-buys", label: "Regulars" },
   { href: "/shop/deals", label: "Deals" },
   { href: "/shop/recipes", label: "Recipes" },
+  { href: "/shop/plan", label: "Plan" },
 ] as const;
 
 export function ShopTabs({ current }: { current: (typeof TABS)[number]["href"] }) {
