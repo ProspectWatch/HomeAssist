@@ -8,6 +8,7 @@ import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { ProductPicker } from "@/components/catalog/product-picker";
 import { useToast } from "@/components/shell/toast-context";
 import { ShopTabs } from "@/components/shell/shop-tabs";
+import { CollapsibleSection, useSectionState } from "@/components/ui/collapsible-section";
 import { storeBadge } from "@/lib/assets";
 import type { GroceryItem } from "@/lib/data/grocery";
 import type { CatalogProduct } from "@/lib/data/catalog";
@@ -35,6 +36,12 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
     label: CATEGORY_LABEL[cat],
     items: visible.filter((i) => i.category === cat),
   })).filter((g) => g.items.length > 0);
+
+  // Aisles fold, but open by default: a shopping list is read while walking a
+  // shop, and hiding what you are about to buy behind a tap is the wrong
+  // default. Folding is for getting a long list back under control, not for
+  // making the common case slower.
+  const sections = useSectionState("list-sections", true);
 
   function submitAddProduct(product: CatalogProduct) {
     startTransition(async () => {
@@ -106,10 +113,13 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
       ) : (
         <div className="flex flex-col gap-4.5 px-5">
           {groups.map((group) => (
-            <div key={group.label}>
-              <div className="mb-2 text-[11px] font-semibold tracking-[0.09em] text-oak uppercase">
-                {group.label}
-              </div>
+            <CollapsibleSection
+              key={group.label}
+              title={group.label}
+              count={group.items.length}
+              open={sections.isOpen(group.label)}
+              onToggle={() => sections.toggle(group.label)}
+            >
               <div className="flex flex-col gap-2">
                 {group.items.map((item) => {
                   const badge = storeBadge(item.retailer?.name);
@@ -160,7 +170,7 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
                   );
                 })}
               </div>
-            </div>
+            </CollapsibleSection>
           ))}
         </div>
       )}

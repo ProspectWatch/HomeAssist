@@ -18,6 +18,8 @@ export type PantryProduct = {
   /** Where the household keeps it — a preference-layer hint, not inventory. */
   stock_location: string | null;
   image_url: string | null;
+  /** Pinned to the top of the list. Regular-buy covers almost everything now. */
+  is_favourite: boolean;
   /** e.g. "Earth's Own · Original" — the household's rule for this item. */
   preference_hint: string | null;
   retailer_name: string | null;
@@ -29,6 +31,7 @@ type PreferenceRow = {
   stock_location: string | null;
   /** This household's own photograph, if someone took one. */
   image_url: string | null;
+  is_favourite: boolean;
   preferred_brand: string | null;
   preferred_variant: string | null;
   preferred_store: string | null;
@@ -48,6 +51,7 @@ type LegacyProductRow = {
   target_price_cents: number | null;
   stock_status: "good" | "low" | null;
   image_url: string | null;
+  is_favourite: boolean;
   catalog_product_id: string | null;
   retailer: { name: string } | null;
 };
@@ -83,7 +87,7 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
       supabase
         .from("household_product_preferences")
         .select(
-          "scope_key, label, preferred_brand, preferred_variant, preferred_store, stock_location, image_url, catalog_product:catalog_products(display_name, category, default_unit, image_url, image_ready)",
+          "scope_key, label, preferred_brand, preferred_variant, preferred_store, stock_location, image_url, is_favourite, catalog_product:catalog_products(display_name, category, default_unit, image_url, image_ready)",
         )
         .eq("household_id", householdId)
         .eq("scope_type", "product")
@@ -91,7 +95,7 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
       supabase
         .from("products")
         .select(
-          "id, title, package_detail, target_price_cents, stock_status, image_url, catalog_product_id, retailer:retailers(name)",
+          "id, title, package_detail, target_price_cents, stock_status, image_url, is_favourite, catalog_product_id, retailer:retailers(name)",
         )
         .eq("household_id", householdId)
         .eq("is_regular_buy", true),
@@ -163,6 +167,7 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
         // Falling back, never show an image the catalogue hasn't marked ready.
         image_url:
           row.image_url ?? (catalog?.image_ready ? catalog.image_url : (sku?.image_url ?? null)),
+        is_favourite: row.is_favourite ?? sku?.is_favourite ?? false,
         preference_hint: preferenceHint(row),
         retailer_name: sku?.retailer?.name ?? null,
       };
@@ -185,6 +190,7 @@ export async function getRegularBuys(householdId: string | null): Promise<Pantry
         on_list: onList(row.catalog_product_id, row.title),
         stock_location: null,
         image_url: row.image_url,
+        is_favourite: row.is_favourite ?? false,
         preference_hint: null,
         retailer_name: row.retailer?.name ?? null,
       }));
@@ -211,7 +217,7 @@ export async function getDepartmentRegularBuys(
     const { data, error } = await supabase
       .from("products")
       .select(
-        "id, title, package_detail, target_price_cents, stock_status, image_url, catalog_product_id, retailer:retailers(name)",
+        "id, title, package_detail, target_price_cents, stock_status, image_url, is_favourite, catalog_product_id, retailer:retailers(name)",
       )
       .eq("household_id", householdId)
       .eq("department_key", departmentKey)
@@ -230,6 +236,7 @@ export async function getDepartmentRegularBuys(
       on_list: false,
       stock_location: null,
       image_url: row.image_url,
+      is_favourite: row.is_favourite ?? false,
       preference_hint: null,
       retailer_name: row.retailer?.name ?? null,
     }));
