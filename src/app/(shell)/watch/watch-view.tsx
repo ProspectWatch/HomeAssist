@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { WatchItemDetailModal } from "@/components/shell/watch-item-detail-modal";
+import { ProductImage } from "@/components/ui/product-image";
 import { formatCents } from "@/lib/money";
 import type { WatchItem, WatchSpec } from "@/lib/data/watch";
 
@@ -72,9 +73,14 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
           {filtered.map((item) => (
             <div key={item.id} className="rounded-(--radius-lg) border border-line bg-white p-3.5 shadow-(--shadow-card)">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="text-[15px] font-semibold">{item.title}</div>
-                  {item.category ? <div className="mt-0.5 text-[11.5px] text-muted">{item.category}</div> : null}
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <div className="w-12 shrink-0 overflow-hidden rounded-(--radius-sm)">
+                    <ProductImage src={item.image_url} alt={item.title} height={48} category={item.category} />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-semibold">{item.title}</div>
+                    {item.category ? <div className="mt-0.5 text-[11.5px] text-muted">{item.category}</div> : null}
+                  </div>
                 </div>
                 <StatusBadge status={item.price_status} />
               </div>
@@ -92,7 +98,18 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
                   <div className="text-[10px] text-muted">Lowest Seen</div>
                 </div>
               </div>
-              {item.retailer_name ? <div className="mt-2 text-[11px] text-muted">{item.retailer_name}</div> : null}
+              {/* Say where the low came from and how much it rests on. "Lowest
+                  seen" off a single sighting is just the only price there has
+                  ever been, and reads as a bargain when it is not. */}
+              {item.sightings > 0 ? (
+                <div className="mt-2 text-[11px] text-muted">
+                  {item.lowest_retailer ? `Lowest at ${item.lowest_retailer}` : "Lowest seen"}
+                  {` · ${item.sightings} ${item.sightings === 1 ? "sighting" : "sightings"}`}
+                </div>
+              ) : (
+                <div className="mt-2 text-[11px] text-muted">No price seen yet — next scan will look</div>
+              )}
+              {item.retailer_name ? <div className="mt-1 text-[11px] text-muted">{item.retailer_name}</div> : null}
               <div className="mt-2.5 flex items-center gap-2">
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelected(item)}>
                   View Product
