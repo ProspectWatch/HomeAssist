@@ -260,3 +260,47 @@ export async function setPantryImage(item: {
     return { ok: true };
   });
 }
+
+/**
+ * Star or unstar a pantry item.
+ *
+ * Regular-buy stopped distinguishing anything once the household's whole
+ * library was in the pantry — 213 rows, all of them things they buy. A
+ * favourite is the shorter list: what gets reached for most, pinned to the top
+ * of Pantry and offered first when building a shop.
+ */
+export async function setFavourite(item: {
+  catalogProductId?: string | null;
+  productId?: string | null;
+  title: string;
+  favourite: boolean;
+}): Promise<ActionResult> {
+  return runHouseholdAction(async (supabase, householdId) => {
+    if (item.catalogProductId) {
+      const { error } = await supabase.from("household_product_preferences").upsert(
+        {
+          household_id: householdId,
+          scope_type: "product",
+          scope_key: item.catalogProductId,
+          label: item.title,
+          is_favourite: item.favourite,
+        },
+        { onConflict: "household_id,scope_type,scope_key" },
+      );
+      if (error) return { ok: false, message: error.message };
+    } else if (item.productId) {
+      const { error } = await supabase
+        .from("products")
+        .update({ is_favourite: item.favourite })
+        .eq("id", item.productId)
+        .eq("household_id", householdId);
+      if (error) return { ok: false, message: error.message };
+    } else {
+      return { ok: false, message: "Couldn't tell which item that was." };
+    }
+
+    revalidatePath("/shop/pantry");
+    revalidatePath("/shop/list");
+    return { ok: true };
+  });
+}

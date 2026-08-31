@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { WatchItemDetailModal } from "@/components/shell/watch-item-detail-modal";
 import { ProductImage } from "@/components/ui/product-image";
+import { CollapsibleSection, useSectionState } from "@/components/ui/collapsible-section";
 import { formatCents } from "@/lib/money";
 import type { WatchItem, WatchSpec } from "@/lib/data/watch";
 
@@ -37,6 +38,34 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
   });
   const showSpecs = specs.length > 0 && (tab === "all" || tab === "tech");
   const isEmpty = filtered.length === 0 && !showSpecs;
+
+  /**
+   * 67 watched products in one scroll is a wall. Grouped by category and
+   * folded, with the ones on offer lifted to the top — a watch list exists to
+   * tell you when something is worth buying, so what has moved comes first and
+   * the rest waits behind a header.
+   */
+  const groups = React.useMemo(() => {
+    const moved = filtered.filter(
+      (w) => w.price_status === "price_dropped" || w.price_status === "target_hit" || w.price_status === "all_time_low",
+    );
+    const byCategory = new Map<string, WatchItem[]>();
+    for (const item of filtered) {
+      if (moved.includes(item)) continue;
+      const key = item.category ?? "Everything else";
+      const bucket = byCategory.get(key);
+      if (bucket) bucket.push(item);
+      else byCategory.set(key, [item]);
+    }
+    const rest = [...byCategory.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([title, list]) => ({ id: title, title, items: list, openByDefault: false }));
+    return moved.length > 0
+      ? [{ id: "__moved", title: "Worth a look", items: moved, openByDefault: true }, ...rest]
+      : rest;
+  }, [filtered]);
+
+  const sections = useSectionState("watch-sections", false);
 
   return (
     <div className="pb-28">
@@ -69,8 +98,15 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
           <EmptyState title="Nothing here yet" />
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5 px-5">
-          {filtered.map((item) => (
+        groups.map((group) => (
+          <CollapsibleSection
+            key={group.id}
+            title={group.title}
+            count={group.items.length}
+            open={sections.isOpen(group.id) || group.openByDefault}
+            onToggle={() => sections.toggle(group.id)}
+          >
+          {group.items.map((item) => (
             <div key={item.id} className="rounded-(--radius-lg) border border-line bg-white p-3.5 shadow-(--shadow-card)">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 items-start gap-2.5">
@@ -120,7 +156,8 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
               </div>
             </div>
           ))}
-        </div>
+          </CollapsibleSection>
+        ))
       )}
 
       <WatchItemDetailModal item={selected} onClose={() => setSelected(null)} />

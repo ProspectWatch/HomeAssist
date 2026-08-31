@@ -22,6 +22,7 @@ export type WatchItem = {
   lowest_retailer: string | null;
   /** How many sightings the price rests on — one price is not a price history. */
   sightings: number;
+  is_favourite: boolean;
 };
 
 type WatchRow = {
@@ -38,6 +39,7 @@ type WatchRow = {
     department_key: string | null;
     image_url: string | null;
     catalog_product_id: string | null;
+    is_favourite: boolean;
     retailer: { name: string } | null;
   } | null;
   athlete: { name: string } | null;
@@ -50,7 +52,7 @@ export async function getWatchItems(householdId: string | null): Promise<WatchIt
     const { data, error } = await supabase
       .from("watch_items")
       .select(
-        "id, category, target_price_cents, regular_price_cents, price_status, needed_by, notes, product:products(id, title, department_key, image_url, catalog_product_id, retailer:retailers(name)), athlete:athletes(name)",
+        "id, category, target_price_cents, regular_price_cents, price_status, needed_by, notes, product:products(id, title, department_key, image_url, catalog_product_id, is_favourite, retailer:retailers(name)), athlete:athletes(name)",
       )
       .eq("household_id", householdId)
       .eq("status", "watching")
@@ -89,6 +91,7 @@ export async function getWatchItems(householdId: string | null): Promise<WatchIt
           image_url: r.product!.image_url,
           lowest_retailer: entry?.lowestRetailer ?? null,
           sightings: entry?.sightings ?? 0,
+          is_favourite: r.product!.is_favourite ?? false,
         };
       });
   } catch {

@@ -23,10 +23,13 @@ import {
   addPantryItemToTrip,
   addPantryRegularBuy,
   preparePantryImageUpload,
+  setFavourite,
   setInventoryStatus,
   setPantryImage,
 } from "./actions";
 import { ProductPhotoButton } from "@/components/pantry/product-photo-button";
+import { CollapsibleSection, useSectionState } from "@/components/ui/collapsible-section";
+import { FavouriteButton } from "@/components/ui/favourite-button";
 
 const ALL = "All";
 const STATUS_FILTERS = ["All", "In Stock", "Low", "Out", "Unknown", "On List"] as const;
@@ -95,7 +98,49 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
     });
   }, [withStatus, search, category, location, status]);
 
+  /**
+   * 213 regular buys is too many to scroll. Grouping by category and folding
+   * each group turns the screen into an index you can see all of at once.
+   * Favourites are lifted out into their own group at the top, open by
+   * default, because that is the short list you came for.
+   */
+  const groups = React.useMemo(() => {
+    const favourites = filtered.filter((i) => i.is_favourite);
+    const byCategory = new Map<string, PantryProduct[]>();
+    for (const item of filtered) {
+      if (item.is_favourite) continue;
+      const key = item.category ?? "Other";
+      const bucket = byCategory.get(key);
+      if (bucket) bucket.push(item);
+      else byCategory.set(key, [item]);
+    }
+    const rest = [...byCategory.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([title, list]) => ({ id: title, title, items: list, openByDefault: false }));
+    return favourites.length > 0
+      ? [{ id: "__favourites", title: "Favourites", items: favourites, openByDefault: true }, ...rest]
+      : rest;
+  }, [filtered]);
+
+  // Searching is a different intent from browsing: you already know what you
+  // want, so every group opens rather than making you fold your way to it.
+  const searching = search.trim().length > 0;
+  const sections = useSectionState("pantry-sections", false);
+
   const reviewed = withStatus.filter((i) => i.inventory_status !== "UNKNOWN").length;
+
+  function toggleFavourite(item: PantryProduct, next: boolean) {
+    return setFavourite({
+      catalogProductId: item.id.startsWith("pref:") ? item.catalog_product_id : null,
+      productId: item.id.startsWith("pref:") ? null : item.id,
+      title: item.title,
+      favourite: next,
+    }).then((res) => {
+      if (!res.ok) showToast(res.message);
+      else router.refresh();
+      return { ok: res.ok };
+    });
+  }
 
   function updateStatus(item: PantryProduct, next: InventoryStatus) {
     if (!item.catalog_product_id) {
@@ -225,8 +270,15 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
           />
         </div>
       ) : (
-        <div className="flex flex-col gap-2 px-5">
-          {filtered.map((item) => (
+        groups.map((group) => (
+          <CollapsibleSection
+            key={group.id}
+            title={group.title}
+            count={group.items.length}
+            open={searching || sections.isOpen(group.id) || group.openByDefault}
+            onToggle={() => sections.toggle(group.id)}
+          >
+            {group.items.map((item) => (
             <div
               key={item.id}
               className="flex flex-col gap-2 rounded-(--radius-md) border border-line bg-white p-3"
@@ -244,6 +296,11 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
                     <div className="text-[11px] text-muted2">{item.stock_location}</div>
                   ) : null}
                 </div>
+                <FavouriteButton
+                  title={item.title}
+                  isFavourite={item.is_favourite}
+                  onToggle={(next) => toggleFavourite(item, next)}
+                />
                 <ProductPhotoButton
                   title={item.title}
                   // A row backed by a preference writes to the household layer;
@@ -266,8 +323,9 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
                 onAddToList={() => addToList(item)}
               />
             </div>
-          ))}
-        </div>
+            ))}
+          </CollapsibleSection>
+        ))
       )}
     </div>
   );

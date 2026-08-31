@@ -414,6 +414,7 @@ export type Database = {
           brand_rigidity: string
           created_at: string
           household_id: string
+          is_favourite: boolean
           id: string
           image_url: string | null
           label: string
@@ -436,6 +437,7 @@ export type Database = {
           brand_rigidity?: string
           created_at?: string
           household_id: string
+          is_favourite?: boolean
           id?: string
           image_url?: string | null
           label: string
@@ -458,6 +460,7 @@ export type Database = {
           brand_rigidity?: string
           created_at?: string
           household_id?: string
+          is_favourite?: boolean
           id?: string
           image_url?: string | null
           label?: string
@@ -923,6 +926,7 @@ export type Database = {
           department_key: string | null
           external_id: string | null
           household_id: string
+          is_favourite: boolean
           id: string
           image_url: string | null
           is_regular_buy: boolean
@@ -942,6 +946,7 @@ export type Database = {
           department_key?: string | null
           external_id?: string | null
           household_id: string
+          is_favourite?: boolean
           id?: string
           image_url?: string | null
           is_regular_buy?: boolean
@@ -961,6 +966,7 @@ export type Database = {
           department_key?: string | null
           external_id?: string | null
           household_id?: string
+          is_favourite?: boolean
           id?: string
           image_url?: string | null
           is_regular_buy?: boolean
