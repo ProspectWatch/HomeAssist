@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
 import { runHouseholdScan } from "@/lib/data/retailer-scan";
+import { runFlyerScan } from "@/lib/data/flyer-scan";
 
 export type ScanActionResult = ActionResult & {
   summary?: string;
@@ -83,5 +84,62 @@ export async function logSeenPrice(input: {
     revalidatePath("/price-history");
     revalidatePath("/home");
     return { ok: true };
+  });
+}
+
+export type FlyerScanActionResult = ActionResult & {
+  summary?: string;
+  /** What the scan looked at and what it could not place, so a thin result is
+   *  explicable rather than mysterious. */
+  detail?: string;
+};
+
+/**
+ * Scans this week's flyers for the household's own products.
+ *
+ * Reports what actually happened, including the parts that didn't work: a
+ * scan that saw 300 deals and could place 4 says so, because "4 deals found"
+ * on its own reads as "there are only 4 deals" and sends someone shopping on
+ * a false picture.
+ */
+export async function scanFlyerDeals(): Promise<FlyerScanActionResult> {
+  return runHouseholdAction<FlyerScanActionResult>(async (_supabase, householdId) => {
+    const result = await runFlyerScan(householdId);
+
+    if (result.status === "FAILED") {
+      return { ok: false, message: result.message };
+    }
+
+    revalidatePath("/shop/deals");
+    revalidatePath("/home");
+
+    const placed = result.observations.length;
+    const coverage =
+      result.totalTargets > result.targetsRequested
+        ? `${result.targetsRequested} of ${result.totalTargets} products searched`
+        : `${result.targetsRequested} product${result.targetsRequested === 1 ? "" : "s"} searched`;
+    const parts = [
+      coverage,
+      `${result.seen} flyer deal${result.seen === 1 ? "" : "s"} seen`,
+      `${placed} matched to your list`,
+    ];
+    const skipped = [
+      result.skippedUnknownMerchant > 0 ? `${result.skippedUnknownMerchant} at stores you don't shop` : null,
+      result.skippedUnmatched > 0 ? `${result.skippedUnmatched} we couldn't identify` : null,
+      result.skippedExpired > 0 ? `${result.skippedExpired} expired` : null,
+    ].filter((p): p is string => !!p);
+
+    return {
+      ok: true,
+      summary: parts.join(" · "),
+      detail: [
+        skipped.length > 0 ? `Skipped: ${skipped.join(", ")}.` : null,
+        result.totalTargets > result.targetsRequested
+          ? "Run again to work through the rest — each scan picks up where the last left off."
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" ") || undefined,
+    };
   });
 }

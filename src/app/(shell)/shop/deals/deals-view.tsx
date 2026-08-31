@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Info, Tag, TrendingDown, TrendingUp } from "lucide-react";
+import { Check, Info, RefreshCw, Tag, TrendingDown, TrendingUp } from "lucide-react";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -19,7 +19,8 @@ import { parsePriceInput } from "@/lib/pricing/parse-price";
 import type { CatalogProduct } from "@/lib/data/catalog";
 import type { Store } from "@/lib/data/stores";
 import type { BestPrice } from "@/lib/data/deals";
-import { logSeenPrice } from "./actions";
+import type { LiveDeal } from "@/lib/data/flyer-deals";
+import { logSeenPrice, scanFlyerDeals } from "./actions";
 
 const VERDICT_STYLES: Record<PriceVerdictCode, { className: string; icon: typeof TrendingDown }> = {
   BEST_EVER: { className: "border-green bg-green/10 text-ink", icon: TrendingDown },
@@ -29,20 +30,37 @@ const VERDICT_STYLES: Record<PriceVerdictCode, { className: string; icon: typeof
   NO_HISTORY: { className: "border-line bg-cream/60 text-ink", icon: Info },
 };
 
+function formatDeadline(validUntil: string | null): string | null {
+  if (!validUntil) return null;
+  const end = new Date(`${validUntil}T12:00:00Z`);
+  const today = new Date();
+  const days = Math.round((end.getTime() - today.getTime()) / 86400000);
+  if (days < 0) return null;
+  if (days === 0) return "ends today";
+  if (days === 1) return "ends tomorrow";
+  return `ends ${end.toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" })}`;
+}
+
 export function DealsView({
   book,
   bestPrices,
   stores,
+  liveDeals,
+  lastScan,
 }: {
   book: Record<string, PriceBookEntry>;
   bestPrices: BestPrice[];
   stores: Store[];
+  liveDeals: LiveDeal[];
+  lastScan: { finishedAt: string; status: string; pricesFound: number; error: string | null } | null;
 }) {
   const { products, loading } = useCatalog();
   const showToast = useToast();
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
 
+  const [scanning, startScan] = React.useTransition();
+  const [scanNote, setScanNote] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState("");
   const [picked, setPicked] = React.useState<CatalogProduct | null>(null);
   const [priceText, setPriceText] = React.useState("");
@@ -65,6 +83,20 @@ export function DealsView({
     setPriceText("");
   }
 
+  function scan() {
+    startScan(async () => {
+      const res = await scanFlyerDeals();
+      if (!res.ok) {
+        setScanNote(null);
+        showToast(res.message);
+        return;
+      }
+      setScanNote([res.summary, res.detail].filter(Boolean).join(" "));
+      showToast(res.summary ?? "Flyer scan finished");
+      router.refresh();
+    });
+  }
+
   function save() {
     if (!picked || priceCents === null) return;
     startTransition(async () => {
@@ -85,6 +117,126 @@ export function DealsView({
         <h1 className="font-serif text-[26px] leading-tight text-ink">Deals</h1>
       </div>
       <ShopTabs current="/shop/deals" />
+
+      {/* ---- Scan control ---- */}
+      <div className="mx-5 mb-3.5 rounded-(--radius-sm) border border-line bg-white px-3.5 py-2.5 shadow-(--shadow-card)">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 text-[11.5px] text-muted">
+            {lastScan ? (
+              <>
+                Flyers checked{" "}
+                <span className="font-semibold text-ink">
+                  {new Date(lastScan.finishedAt).toLocaleString("en-CA", {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </>
+            ) : (
+              "Flyers haven't been checked yet"
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={scan}
+            disabled={scanning}
+            className="flex shrink-0 cursor-pointer items-center gap-1.5 text-[11.5px] font-semibold text-ink disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${scanning ? "animate-spin" : ""}`} aria-hidden="true" />
+            {scanning ? "Checking…" : "Check flyers"}
+          </button>
+        </div>
+        {scanNote ? <p className="mt-1.5 text-[11px] leading-relaxed text-muted2">{scanNote}</p> : null}
+      </div>
+
+      {/* ---- This week's flyer deals ---- */}
+      <section className="mx-5 mb-3.5">
+        <h2 className="mb-1.5 font-serif text-base font-semibold">On sale this week</h2>
+        {liveDeals.length === 0 ? (
+          <EmptyState
+            icon={Tag}
+            title={lastScan ? "No live deals right now" : "No flyers checked yet"}
+            description={
+              lastScan
+                ? "Nothing in this week's flyers matched the products you buy. Check again after the new flyers land — most drop Thursday."
+                : "Tap Check flyers to search this week's flyers at your stores for the things you actually buy."
+            }
+          />
+        ) : (
+          <div className="flex flex-col gap-2">
+            {liveDeals.map((deal) => {
+              const deadline = formatDeadline(deal.validUntil);
+              const strong = deal.verdict?.code === "BEST_EVER" || deal.verdict?.code === "GOOD";
+              return (
+                <div
+                  key={deal.id}
+                  className={`flex gap-3 rounded-(--radius-md) border bg-white p-3 shadow-(--shadow-card) ${
+                    strong ? "border-green" : "border-line"
+                  }`}
+                >
+                  <ProductImage
+                    src={deal.imageReady ? deal.imageUrl : null}
+                    alt={deal.name}
+                    height={52}
+                    category={deal.category}
+                    className="w-13 shrink-0 overflow-hidden rounded-(--radius-sm) border border-line"
+                  />
+                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold">{deal.name}</div>
+                        {/* The flyer's own wording, so a mis-match is visible
+                            rather than hidden behind our catalogue name. */}
+                        {deal.rawName ? (
+                          <div className="truncate text-[11px] text-muted2">{deal.rawName}</div>
+                        ) : null}
+                      </div>
+                      {deal.isRegularBuy ? <Badge variant="oak">Regular</Badge> : null}
+                    </div>
+
+                    <div className="flex flex-wrap items-baseline gap-x-2 text-[11.5px]">
+                      <span className="text-sm font-semibold text-green">{formatCents(deal.priceCents)}</span>
+                      {deal.regularPriceCents && deal.regularPriceCents > deal.priceCents ? (
+                        <span className="text-muted2 line-through">{formatCents(deal.regularPriceCents)}</span>
+                      ) : null}
+                      <span className="text-muted">
+                        {deal.retailerName ?? "Store not identified"}
+                        {deadline ? ` · ${deadline}` : ""}
+                      </span>
+                    </div>
+
+                    {deal.promotionText ? (
+                      <div className="text-[11px] font-semibold text-oak">{deal.promotionText}</div>
+                    ) : null}
+
+                    {deal.verdict ? (
+                      <p className="text-[11px] leading-relaxed text-muted">
+                        <span className="font-semibold text-ink">{deal.verdict.headline}.</span>{" "}
+                        {deal.verdict.detail}
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted2">
+                        No price history for this yet — nothing to compare it against.
+                      </p>
+                    )}
+
+                    {/* Flyers advertise several products under one price
+                        ("CARROTS OR YELLOW ONIONS"). Say so rather than
+                        presenting one reading of the offer as a fact. */}
+                    {deal.isMultiItemOffer ? (
+                      <p className="text-[10.5px] text-muted2">
+                        This flyer offer covers more than one product — check the wording above before counting on it.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
 
       {/* ---- Price check ---- */}
       <section className="mx-5 mb-3.5 rounded-(--radius-lg) border border-line bg-white p-3.5 shadow-(--shadow-card)">
@@ -239,16 +391,17 @@ export function DealsView({
         )}
       </section>
 
-      {/* ---- Honest status on live retailer pricing ---- */}
+      {/* ---- Where the deal data comes from ---- */}
       <section className="mx-5 rounded-(--radius-sm) border border-line bg-cream/50 p-3.5">
         <div className="flex items-center gap-1.5">
           <Info className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden="true" />
-          <span className="text-[12px] font-semibold">Why there&apos;s no live store feed</span>
+          <span className="text-[12px] font-semibold">Where these come from</span>
         </div>
         <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
-          The Fortinos and No Frills adapters are built, but both retailers refuse automated access to an
-          identified client, and working around their bot controls is out of scope. So this page compares against
-          your own record instead — every receipt you scan and every price you log above makes it sharper.
+          This week&apos;s printed flyers for your postal code, filtered to the stores you shop at and matched
+          against the products you buy. Flyer prices are advertised sale prices, so they&apos;re kept out of your
+          price book&apos;s &ldquo;usual&rdquo; — the book is what you actually pay, and it&apos;s what judges these deals.
+          Store shelf prices aren&apos;t available: both Loblaw banners refuse automated access.
         </p>
         <Link href="/price-history" className="mt-1.5 inline-block text-[11.5px] font-semibold text-ink">
           See your full price book →

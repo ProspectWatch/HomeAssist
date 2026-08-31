@@ -89,7 +89,12 @@ export async function getPriceSightings(householdId: string): Promise<PriceSight
         // This household's own entries, plus retailer-wide adapter output
         // (household_id null), which belongs to no single household.
         .or(`household_id.eq.${householdId},household_id.is.null`)
-        .neq("source_type", "RECEIPT")
+        // RECEIPT rows mirror household_purchases, already counted above.
+        // FLYER rows are advertised sale prices with an expiry date — real,
+        // but not what the household normally pays. Folding a week of sale
+        // prices into the median would drag "usual" down and then flag the
+        // ordinary shelf price as an overpayment.
+        .not("source_type", "in", "(RECEIPT,FLYER)")
         .in("match_status", ["MATCHED", "LIKELY_MATCH"])
         .order("observed_on", { ascending: false })
         .range(from, to),
