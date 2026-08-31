@@ -373,27 +373,36 @@ export type Database = {
         Row: {
           created_at: string
           household_id: string
+          allergies: string[]
+          dislikes: string[]
           id: string
           is_child: boolean
           name: string
+          notes?: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
           created_at?: string
           household_id: string
+          allergies?: string[]
+          dislikes?: string[]
           id?: string
           is_child?: boolean
           name: string
+          notes?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
           created_at?: string
           household_id?: string
+          allergies?: string[]
+          dislikes?: string[]
           id?: string
           is_child?: boolean
           name?: string
+          notes?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -1261,6 +1270,9 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          household_id: string | null
+          meal_types: string[]
+          notes: string | null
           name: string
           servings: string | null
           time_minutes: number | null
@@ -1268,6 +1280,9 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          household_id?: string | null
+          meal_types?: string[]
+          notes?: string | null
           name: string
           servings?: string | null
           time_minutes?: number | null
@@ -1275,6 +1290,9 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          household_id?: string | null
+          meal_types?: string[]
+          notes?: string | null
           name?: string
           servings?: string | null
           time_minutes?: number | null

@@ -13,6 +13,10 @@ export type HouseholdPerson = {
   isChild: boolean;
   /** Set when this person also signs in. Null for children. */
   hasLogin: boolean;
+  /** Screened against recipe ingredients. A screen, never a guarantee. */
+  allergies: string[];
+  /** Won't eat it. Flagged when planning, never blocking. */
+  dislikes: string[];
 };
 
 export const MAX_PERSON_NAME = 40;

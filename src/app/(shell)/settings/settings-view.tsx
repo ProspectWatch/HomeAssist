@@ -13,6 +13,7 @@ import { saveHouseholdSettings } from "./actions";
 import { signOut } from "@/lib/actions/auth-actions";
 import { addHouseholdPerson, removeHouseholdPerson } from "@/lib/actions/people-actions";
 import { buildJoinLink, type HouseholdPerson } from "@/lib/household/people";
+import { DietaryEditor } from "@/components/household/dietary-editor";
 
 const RADIUS_LABELS: { key: string; label: string }[] = [
   { key: "grocery", label: "Grocery Radius" },
@@ -152,6 +153,7 @@ export function SettingsView({
  * shopping is for them, and attribution needs a name to point at.
  */
 function PeopleSection({ people }: { people: HouseholdPerson[] }) {
+  const [editing, setEditing] = React.useState<HouseholdPerson | null>(null);
   const [name, setName] = React.useState("");
   const [isChild, setIsChild] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -200,16 +202,37 @@ function PeopleSection({ people }: { people: HouseholdPerson[] }) {
                   {person.isChild ? "Child" : "Adult"}
                   {person.hasLogin ? " · signs in" : ""}
                 </span>
+                {/* Allergies are named, never summarised as a count — the whole
+                    point of recording one is that somebody can see what it is. */}
+                {person.allergies.length > 0 ? (
+                  <span className="mt-0.5 block text-[11.5px] font-semibold text-ink">
+                    Allergic to {person.allergies.join(", ")}
+                  </span>
+                ) : null}
+                {person.dislikes.length > 0 ? (
+                  <span className="block text-[11.5px] text-muted2">
+                    Won&rsquo;t eat {person.dislikes.join(", ")}
+                  </span>
+                ) : null}
               </span>
-              <button
-                type="button"
-                aria-label={`Remove ${person.name}`}
-                disabled={pending}
-                onClick={() => remove(person)}
-                className="ml-2 shrink-0 cursor-pointer text-[12px] font-semibold text-muted2 disabled:opacity-50"
-              >
-                Remove
-              </button>
+              <span className="ml-2 flex shrink-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditing(person)}
+                  className="cursor-pointer text-[12px] font-semibold text-ink"
+                >
+                  Food
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remove ${person.name}`}
+                  disabled={pending}
+                  onClick={() => remove(person)}
+                  className="cursor-pointer text-[12px] font-semibold text-muted2 disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </span>
             </div>
           ))}
         </div>
@@ -244,6 +267,13 @@ function PeopleSection({ people }: { people: HouseholdPerson[] }) {
         </div>
         {error ? <p className="text-[12.5px] text-[#b5482f]">{error}</p> : null}
       </form>
+
+      <DietaryEditor
+        person={editing}
+        open={editing !== null}
+        onClose={() => setEditing(null)}
+        onSaved={() => router.refresh()}
+      />
     </section>
   );
 }

@@ -91,3 +91,42 @@ export async function setReceiptLinePerson(
     return { ok: true };
   });
 }
+
+/**
+ * Records what a person can't have and won't eat.
+ *
+ * Stored as lists rather than a note so the planner can match them against
+ * ingredient names. Entries are trimmed and de-duplicated case-insensitively —
+ * "Peanut" and "peanut" are one allergen, and a list that shows both invites
+ * someone to remove the wrong one.
+ */
+export async function setPersonDietary(
+  personId: string,
+  dietary: { allergies: string[]; dislikes: string[] },
+): Promise<ActionResult> {
+  const clean = (values: string[]) => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of values) {
+      const value = raw.trim();
+      if (!value) continue;
+      const key = value.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(value);
+    }
+    return out;
+  };
+
+  return runHouseholdAction(async (supabase, householdId) => {
+    const { error } = await supabase
+      .from("household_people")
+      .update({ allergies: clean(dietary.allergies), dislikes: clean(dietary.dislikes) })
+      .eq("id", personId)
+      .eq("household_id", householdId);
+    if (error) return { ok: false, message: error.message };
+    revalidateAll();
+    revalidatePath("/shop/recipes");
+    return { ok: true };
+  });
+}

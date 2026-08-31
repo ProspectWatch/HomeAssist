@@ -9,7 +9,9 @@ import {
 } from "./people";
 
 function person(overrides: Partial<HouseholdPerson> = {}): HouseholdPerson {
-  return { id: "p1", name: "Steph", isChild: false, hasLogin: false, ...overrides };
+  return {
+    allergies: [],
+    dislikes: [], id: "p1", name: "Steph", isChild: false, hasLogin: false, ...overrides };
 }
 
 describe("naming a person", () => {

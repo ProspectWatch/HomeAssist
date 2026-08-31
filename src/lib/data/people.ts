@@ -8,16 +8,25 @@ export async function getHouseholdPeople(householdId: string | null): Promise<Ho
     const supabase = await createClient();
     const { data, error } = await supabase
       .from("household_people")
-      .select("id, name, is_child, user_id")
+      .select("id, name, is_child, user_id, allergies, dislikes")
       .eq("household_id", householdId);
     if (error || !data) return [];
-    type Row = { id: string; name: string; is_child: boolean; user_id: string | null };
+    type Row = {
+      id: string;
+      name: string;
+      is_child: boolean;
+      user_id: string | null;
+      allergies: string[] | null;
+      dislikes: string[] | null;
+    };
     return sortPeople(
       (data as Row[]).map((r) => ({
         id: r.id,
         name: r.name,
         isChild: r.is_child,
         hasLogin: r.user_id !== null,
+        allergies: r.allergies ?? [],
+        dislikes: r.dislikes ?? [],
       })),
     );
   } catch {
