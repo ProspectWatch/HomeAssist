@@ -8,7 +8,14 @@ import { useRouter } from "next/navigation";
 import { MAX_CODE_LENGTH, isPlausibleSignInCode, normalizeSignInCode } from "@/lib/auth/sign-in-code";
 import { sendMagicLink, verifyEmailCode } from "./actions";
 
-export function LoginView({ initialError }: { initialError?: string }) {
+export function LoginView({
+  initialError,
+  destination = "/home",
+}: {
+  initialError?: string;
+  /** Where to land after signing in — an invite link sends people to /join. */
+  destination?: string;
+}) {
   const [email, setEmail] = React.useState("");
   const [pending, startTransition] = React.useTransition();
   const [code, setCode] = React.useState("");
@@ -27,7 +34,7 @@ export function LoginView({ initialError }: { initialError?: string }) {
         setCodeError(res.message);
         return;
       }
-      router.replace("/home");
+      router.replace(destination);
       router.refresh();
     });
   }
