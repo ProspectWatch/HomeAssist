@@ -289,6 +289,42 @@ export type Database = {
           },
         ]
       }
+      household_hidden_recipes: {
+        Row: {
+          hidden_at: string
+          hidden_by: string | null
+          household_id: string
+          recipe_id: string
+        }
+        Insert: {
+          hidden_at?: string
+          hidden_by?: string | null
+          household_id: string
+          recipe_id: string
+        }
+        Update: {
+          hidden_at?: string
+          hidden_by?: string | null
+          household_id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "household_hidden_recipes_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "household_hidden_recipes_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       household_inventory_state: {
         Row: {
           catalog_product_id: string

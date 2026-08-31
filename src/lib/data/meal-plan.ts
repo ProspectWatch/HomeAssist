@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getHiddenRecipeIds } from "@/lib/data/recipes";
 import { getHouseholdPeople } from "@/lib/data/people";
 import { screenMeal, type MealScreen, type ScreenablePerson } from "@/lib/meals/allergens";
 import {
@@ -36,6 +37,10 @@ export async function getPlannableRecipes(householdId: string | null): Promise<P
       .order("name");
     if (error || !data) return [];
 
+    // A starter recipe the household has removed should not come back as
+    // something to plan.
+    const hidden = await getHiddenRecipeIds();
+
     type Row = {
       id: string;
       name: string;
@@ -51,7 +56,7 @@ export async function getPlannableRecipes(householdId: string | null): Promise<P
       }[];
     };
 
-    return (data as unknown as Row[]).map((row) => ({
+    return (data as unknown as Row[]).filter((row) => !hidden.has(row.id)).map((row) => ({
       id: row.id,
       name: row.name,
       timeMinutes: row.time_minutes,
