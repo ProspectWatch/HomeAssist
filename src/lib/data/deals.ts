@@ -1,70 +1,58 @@
-import { createClient } from "@/lib/supabase/server";
+import { getPriceBookRows, type PriceBookRow } from "@/lib/data/price-book";
 
-export type Deal = {
-  id: string;
-  title: string;
-  price_cents: number;
-  regular_price_cents: number | null;
-  retailer_name: string | null;
-  image_url: string | null;
+/**
+ * Deal detection against the household's own price book.
+ *
+ * There is no live retailer feed to search: the Loblaw banner endpoints the
+ * adapters target refuse automated access, and defeating that is out of
+ * scope. What can be answered honestly is the question that actually saves
+ * money — "where has this been cheapest, and by how much?" — using prices
+ * this household really paid or really saw.
+ */
+export type BestPrice = {
+  catalogProductId: string;
+  name: string;
+  category: string;
+  imageUrl: string | null;
+  imageReady: boolean;
+  isRegularBuy: boolean;
+  bestCents: number;
+  bestRetailer: string | null;
+  typicalCents: number;
+  savingVsTypicalCents: number;
 };
 
 /**
- * A "deal" is a scan-sourced price_snapshot that beat a household's target
- * price on a product it's watching or regularly buys. Real query against
- * the real schema — but until the scan pipeline (§4 of the architecture
- * doc) actually runs, there are no source='scan' rows to match, so this
- * is always empty today. That's the truthful state, not a placeholder.
+ * Products whose price book shows a real gap between the best price seen and
+ * the usual one. Thin entries are excluded: with one or two sightings the
+ * "best" price is just the only price, and calling it a find would be
+ * inventing a saving that hasn't been demonstrated.
  */
-export async function getDeals(householdId: string | null): Promise<Deal[]> {
-  if (!householdId) return [];
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("price_snapshots")
-      .select(
-        "id, price_cents, product:products!inner(household_id, title, image_url, target_price_cents, retailer:retailers(name))",
-      )
-      .eq("product.household_id", householdId)
-      .eq("source", "scan")
-      .order("captured_at", { ascending: false })
-      .limit(20);
-    if (error || !data) return [];
-    type Row = {
-      id: string;
-      price_cents: number;
-      product: {
-        title: string;
-        image_url: string | null;
-        target_price_cents: number | null;
-        retailer: { name: string } | null;
-      };
-    };
-    return (data as unknown as Row[]).map((row) => ({
-      id: row.id,
-      title: row.product.title,
-      price_cents: row.price_cents,
-      regular_price_cents: row.product.target_price_cents,
-      retailer_name: row.product.retailer?.name ?? null,
-      image_url: row.product.image_url,
-    }));
-  } catch {
-    return [];
-  }
+export function bestPricesFromRows(rows: PriceBookRow[], limit = 20): BestPrice[] {
+  return rows
+    .filter((row) => row.confidence !== "THIN" && row.lowestCents < row.typicalCents)
+    .map((row) => ({
+      catalogProductId: row.catalogProductId,
+      name: row.name,
+      category: row.category,
+      imageUrl: row.imageUrl,
+      imageReady: row.imageReady,
+      isRegularBuy: row.isRegularBuy,
+      bestCents: row.lowestCents,
+      bestRetailer: row.lowestRetailer,
+      typicalCents: row.typicalCents,
+      savingVsTypicalCents: row.typicalCents - row.lowestCents,
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.isRegularBuy) - Number(a.isRegularBuy) ||
+        b.savingVsTypicalCents - a.savingVsTypicalCents ||
+        a.name.localeCompare(b.name),
+    )
+    .slice(0, limit);
 }
 
-export async function getLastScanTime(): Promise<string | null> {
-  try {
-    const supabase = await createClient();
-    const { data } = await supabase
-      .from("scan_jobs")
-      .select("finished_at")
-      .eq("status", "succeeded")
-      .order("finished_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    return data?.finished_at ?? null;
-  } catch {
-    return null;
-  }
+/** Convenience wrapper for callers that don't already hold the price book. */
+export async function getBestPrices(householdId: string | null, limit = 20): Promise<BestPrice[]> {
+  return bestPricesFromRows(await getPriceBookRows(householdId), limit);
 }

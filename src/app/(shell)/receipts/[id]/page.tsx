@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getReceiptDetail } from "@/lib/data/receipts";
 import { getHouseholdPeople } from "@/lib/data/people";
+import { getReceiptPriceNotes } from "@/lib/data/receipt-prices";
 import { ReceiptReviewView } from "./receipt-review-view";
 
 export default async function ReceiptReviewPage({ params }: { params: Promise<{ id: string }> }) {
@@ -12,5 +13,7 @@ export default async function ReceiptReviewPage({ params }: { params: Promise<{ 
     getHouseholdPeople(householdId),
   ]);
   if (!receipt) notFound();
-  return <ReceiptReviewView receipt={receipt} people={people} />;
+
+  const priceNotes = await getReceiptPriceNotes(householdId, receipt);
+  return <ReceiptReviewView receipt={receipt} people={people} priceNotes={priceNotes} />;
 }
