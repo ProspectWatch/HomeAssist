@@ -13,6 +13,8 @@
  * discovered at the stove.
  */
 
+import { decodeEntities } from "@/lib/recipes/ingredient-match";
+
 export type ImportedRecipe = {
   name: string;
   timeMinutes: number | null;
@@ -161,8 +163,10 @@ function ingredientList(value: unknown): string[] {
   for (const entry of raw) {
     const text = textOf(entry);
     if (!text) continue;
-    // Collapse the whitespace and non-breaking spaces recipe sites are full of.
-    const clean = text.replace(/ /g, " ").replace(/\s+/g, " ").trim();
+    // Collapse the whitespace and non-breaking spaces recipe sites are full of,
+    // and decode the HTML entities that survive JSON-LD — a real imported
+    // line read "Portugal&#39;s yellow potatoes" until this was added.
+    const clean = decodeEntities(text).replace(/ /g, " ").replace(/\s+/g, " ").trim();
     if (!clean) continue;
     const key = clean.toLowerCase();
     if (seen.has(key)) continue;

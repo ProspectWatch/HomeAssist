@@ -1335,6 +1335,57 @@ export type Database = {
           },
         ]
       }
+      recipe_images: {
+        Row: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          household_id: string
+          id: string
+          image_url: string
+          is_cover: boolean
+          recipe_id: string
+          sort_order: number
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          household_id: string
+          id?: string
+          image_url: string
+          is_cover?: boolean
+          recipe_id: string
+          sort_order?: number
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          household_id?: string
+          id?: string
+          image_url?: string
+          is_cover?: boolean
+          recipe_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_images_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_images_household_id_fkey"
+            columns: ["household_id"]
+            isOneToOne: false
+            referencedRelation: "households"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipes: {
         Row: {
           created_at: string
