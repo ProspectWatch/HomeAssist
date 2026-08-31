@@ -50,13 +50,20 @@ export type ScanTargetInputs = {
   /** catalogProductId -> display name, for building the search query. */
   namesById: Map<string, string>;
   /**
-   * catalogProductId -> the branded product this household actually buys.
+   * catalogProductId -> the brand this household buys, e.g. "Doritos".
    *
-   * Preferred over the catalogue name when present, because the two find
-   * different things. Searching "Corn Chips" returns whatever a flyer happens
-   * to file under that heading; searching "Doritos" returns the bag on this
-   * family's shelf, at a named price, in a named store. The catalogue name
-   * stays the fallback for everything the household has not named a brand for.
+   * The brand alone, deliberately, and preferred over the catalogue name.
+   * Measured against the live search for one product in one postal code:
+   *
+   *     Doritos                                19 flyer offers, 44 listings
+   *     Nacho Cheese Tortilla Chips             0 flyer offers, 15 listings
+   *     Doritos Nacho Cheese Tortilla Chips     0 flyer offers,  7 listings
+   *
+   * Flyer copy is terse -- a page says "Doritos", never the full product name
+   * -- so the longer the query, the fewer flyer offers match, and the flyer is
+   * where the actual discounts are. The full title looks like the most precise
+   * query and is the worst of the three. Narrowing to the right product is the
+   * matcher's job downstream, on results this actually returned.
    */
   brandNamesById?: Map<string, string>;
 };

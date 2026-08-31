@@ -19,17 +19,17 @@ describe("buildScanTargets — branded queries", () => {
   };
 
   it("searches the brand the household buys, not the catalogue heading", () => {
-    // The two find different things: "Corn Chips" returns whatever a flyer
-    // files under that heading, "Doritos" returns the bag on their shelf.
+    // Measured: "Doritos" returns 19 flyer offers where both "Nacho Cheese
+    // Tortilla Chips" and the full product title return none.
     const targets = buildScanTargets({
       ...empty,
       watchCatalogIds: ["corn-chips"],
-      brandNamesById: new Map([["corn-chips", "Doritos Nacho Cheese Tortilla Chips"]]),
+      brandNamesById: new Map([["corn-chips", "Doritos"]]),
     });
     expect(targets).toEqual([
       {
         catalogProductId: "corn-chips",
-        query: "Doritos Nacho Cheese Tortilla Chips",
+        query: "Doritos",
         reason: "WATCH",
       },
     ]);
@@ -50,10 +50,10 @@ describe("buildScanTargets — branded queries", () => {
     const targets = buildScanTargets({
       ...empty,
       regularBuyCatalogIds: ["peanut-butter", "peanut-butter"],
-      brandNamesById: new Map([["peanut-butter", "Kraft Crunchy Peanut Butter"]]),
+      brandNamesById: new Map([["peanut-butter", "Kraft"]]),
     });
     expect(targets).toHaveLength(1);
-    expect(targets[0].query).toBe("Kraft Crunchy Peanut Butter");
+    expect(targets[0].query).toBe("Kraft");
   });
 
   it("is unaffected when the household has named no brands at all", () => {

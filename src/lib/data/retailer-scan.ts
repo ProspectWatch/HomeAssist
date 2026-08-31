@@ -83,11 +83,12 @@ export async function getScanTargets(
       .eq("household_id", householdId)
       .eq("status", "watching"),
     supabase.from("catalog_products").select("id, display_name").eq("active", true),
-    // The household's own branded products, so the scan searches "Doritos"
-    // rather than "Corn Chips" wherever this family has named what they buy.
+    // The household's own brands, so the scan searches "Doritos" rather than
+    // "Corn Chips" wherever this family has named what they buy. The brand
+    // alone, not the full product title -- see buildScanTargets.
     supabase
       .from("products")
-      .select("title, catalog_product_id")
+      .select("brand, catalog_product_id")
       .eq("household_id", householdId)
       .not("catalog_product_id", "is", null),
   ]);
@@ -101,9 +102,9 @@ export async function getScanTargets(
   // butters, three gelati). First one wins rather than scanning the concept
   // repeatedly — the budget is better spent reaching more products.
   const brandNamesById = new Map<string, string>();
-  for (const row of (brandRes.data ?? []) as { title: string; catalog_product_id: string }[]) {
-    if (!brandNamesById.has(row.catalog_product_id)) {
-      brandNamesById.set(row.catalog_product_id, row.title);
+  for (const row of (brandRes.data ?? []) as { brand: string | null; catalog_product_id: string }[]) {
+    if (row.brand && !brandNamesById.has(row.catalog_product_id)) {
+      brandNamesById.set(row.catalog_product_id, row.brand);
     }
   }
 
