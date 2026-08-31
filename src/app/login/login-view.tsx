@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+import { MAX_CODE_LENGTH, isPlausibleSignInCode, normalizeSignInCode } from "@/lib/auth/sign-in-code";
 import { sendMagicLink, verifyEmailCode } from "./actions";
 
 export function LoginView({ initialError }: { initialError?: string }) {
@@ -59,21 +60,21 @@ export function LoginView({ initialError }: { initialError?: string }) {
                   works in this browser. */}
               <form onSubmit={submitCode} className="mt-4 flex flex-col gap-2">
                 <label htmlFor="code" className="text-[12.5px] font-semibold text-ink">
-                  Enter the 6-digit code
+                  Enter the code from the email
                 </label>
                 <Input
                   id="code"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   pattern="[0-9]*"
-                  maxLength={6}
-                  placeholder="123456"
+                  maxLength={MAX_CODE_LENGTH}
+                  placeholder="Code"
                   value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onChange={(e) => setCode(normalizeSignInCode(e.target.value))}
                   className="text-center text-[20px] tracking-[0.4em]"
                 />
                 {codeError ? <p className="text-[12.5px] text-[#b5482f]">{codeError}</p> : null}
-                <Button type="submit" size="lg" disabled={pending || code.length !== 6}>
+                <Button type="submit" size="lg" disabled={pending || !isPlausibleSignInCode(code)}>
                   {pending ? "Signing in…" : "Sign in"}
                 </Button>
               </form>
