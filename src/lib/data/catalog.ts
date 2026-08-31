@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { isBrandRigidity, type RegularBuy } from "@/lib/household/regular-buys";
 
 // The generic, reusable product dictionary (catalog_products) — distinct
 // from `products`, which is a household's own tracked SKU. See migration
@@ -192,4 +193,74 @@ export function resolvePreferenceForCatalogProduct(
   }
   const byCategory = preferences.find((p) => p.scope_type === "category" && p.scope_key === product.category);
   return byCategory ?? null;
+}
+
+/**
+ * The household's tagged Regular Buys, joined to the catalogue.
+ *
+ * Distinct from getRegularBuys() in data/pantry.ts, which answers "what's in
+ * the pantry and is it stocked". This answers "what does this household buy,
+ * and which brand do they want" — the baseline deal matching reads.
+ */
+export async function getRegularBuyList(householdId: string | null): Promise<RegularBuy[]> {
+  if (!householdId) return [];
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("household_product_preferences")
+      .select(
+        "scope_key, label, preferred_brand, brand_rigidity, catalog_product:catalog_products(display_name, category, subcategory, image_url, image_ready)",
+      )
+      .eq("household_id", householdId)
+      .eq("scope_type", "product")
+      .eq("regular_buy", true);
+    if (error || !data) return [];
+
+    type Row = {
+      scope_key: string;
+      label: string;
+      preferred_brand: string | null;
+      brand_rigidity: string;
+      catalog_product: {
+        display_name: string;
+        category: string;
+        subcategory: string | null;
+        image_url: string | null;
+        image_ready: boolean;
+      } | null;
+    };
+
+    return (data as unknown as Row[]).map((row) => ({
+      catalogProductId: row.scope_key,
+      // The catalogue name wins when the row still points at a live product;
+      // the stored label is the fallback for anything since removed.
+      displayName: row.catalog_product?.display_name ?? row.label,
+      category: row.catalog_product?.category ?? "Other",
+      subcategory: row.catalog_product?.subcategory ?? null,
+      imageUrl: row.catalog_product?.image_url ?? null,
+      imageReady: row.catalog_product?.image_ready ?? false,
+      preferredBrand: row.preferred_brand,
+      brandRigidity: isBrandRigidity(row.brand_rigidity) ? row.brand_rigidity : "FLEXIBLE",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Just the ids, for marking products already tagged while browsing. */
+export async function getRegularBuyIds(householdId: string | null): Promise<string[]> {
+  if (!householdId) return [];
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("household_product_preferences")
+      .select("scope_key")
+      .eq("household_id", householdId)
+      .eq("scope_type", "product")
+      .eq("regular_buy", true);
+    if (error || !data) return [];
+    return (data as { scope_key: string }[]).map((r) => r.scope_key);
+  } catch {
+    return [];
+  }
 }
