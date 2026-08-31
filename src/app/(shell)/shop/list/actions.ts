@@ -104,3 +104,28 @@ export async function addItemsToGroceryList(
     return { ok: true };
   });
 }
+
+/**
+ * Records which flavours we want of one line on the list.
+ *
+ * Only a per-trip choice: it writes to this row and nowhere else. Promoting it
+ * to household_product_preferences.preferred_variant would turn "Sweet Chili
+ * Heat this week" into a standing preference and mislabel every future list.
+ */
+export async function setGroceryItemVariants(
+  id: string,
+  variants: string[],
+): Promise<ActionResult> {
+  const cleaned = [...new Set(variants.map((v) => v.trim()).filter(Boolean))].slice(0, 8);
+
+  return runHouseholdAction(async (supabase, householdId) => {
+    const { error } = await supabase
+      .from("grocery_items")
+      .update({ variants: cleaned })
+      .eq("id", id)
+      .eq("household_id", householdId);
+    if (error) return { ok: false, message: error.message };
+    revalidatePath("/shop/list");
+    return { ok: true };
+  });
+}

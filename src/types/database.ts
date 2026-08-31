@@ -222,6 +222,7 @@ export type Database = {
           qty: string | null
           retailer_id: string | null
           source: string
+          variants: string[]
         }
         Insert: {
           added_by?: string | null
@@ -238,6 +239,7 @@ export type Database = {
           qty?: string | null
           retailer_id?: string | null
           source?: string
+          variants?: string[]
         }
         Update: {
           added_by?: string | null
@@ -254,6 +256,7 @@ export type Database = {
           qty?: string | null
           retailer_id?: string | null
           source?: string
+          variants?: string[]
         }
         Relationships: [
           {

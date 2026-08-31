@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { WatchItemDetailModal } from "@/components/shell/watch-item-detail-modal";
 import { ProductImage } from "@/components/ui/product-image";
 import { CollapsibleSection, useSectionState } from "@/components/ui/collapsible-section";
+import { AddItemBar } from "@/components/ui/add-item-bar";
+import { useAppShell } from "@/components/shell/app-shell-context";
 import { formatCents } from "@/lib/money";
 import type { WatchItem, WatchSpec } from "@/lib/data/watch";
 
@@ -27,6 +29,7 @@ const TABS: { key: WatchTab; label: string }[] = [
 export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSpec[] }) {
   const [tab, setTab] = React.useState<WatchTab>("all");
   const [selected, setSelected] = React.useState<WatchItem | null>(null);
+  const { openAddWatch } = useAppShell();
 
   const filtered = items.filter((w) => {
     if (tab === "priceDrops") return w.price_status === "price_dropped";
@@ -76,6 +79,13 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
         </p>
       </div>
 
+      {/* Watch had no add button of its own — only the floating + in the
+          corner, which opens a menu of six things and never says that one of
+          them puts a product here. */}
+      <div className="mb-3 px-5">
+        <AddItemBar label="Watch a product" onClick={() => openAddWatch("watch")} />
+      </div>
+
       <div className="mb-4 px-5">
         <ChipTabs options={TABS} value={tab} onChange={setTab} />
       </div>
@@ -95,7 +105,10 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
 
       {isEmpty ? (
         <div className="px-5">
-          <EmptyState title="Nothing here yet" />
+          <EmptyState
+            title="Nothing here yet"
+            description="Use Watch a product above to track something until the price is right."
+          />
         </div>
       ) : (
         groups.map((group) => (
