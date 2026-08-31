@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
 import { runHouseholdScan } from "@/lib/data/retailer-scan";
 import { runFlyerScan } from "@/lib/data/flyer-scan";
+import { addHouseholdNeed } from "@/app/(shell)/shop/pantry/actions";
+import { formatCents } from "@/lib/money";
 
 export type ScanActionResult = ActionResult & {
   summary?: string;
@@ -148,4 +150,52 @@ export async function scanFlyerDeals(): Promise<FlyerScanActionResult> {
         .join(" ") || undefined,
     };
   });
+}
+
+/**
+ * Puts a deal on the shopping list.
+ *
+ * The list stores the household's own generic name for the thing, not the
+ * flyer's wording — "Bacon", never "SCHNEIDERS® BACON, 375G" — because that
+ * is what duplicate matching and every later comparison work on. What the
+ * flyer actually said goes in the note, so the reason it was added is still
+ * legible at the shelf: the price, the store, and when the offer ends.
+ *
+ * Routed through addHouseholdNeed so duplicate protection cannot be bypassed:
+ * adding a deal for something already on the list updates that row instead of
+ * creating a second one.
+ */
+export async function addDealToList(input: {
+  catalogProductId: string;
+  name: string;
+  retailerName: string | null;
+  priceCents: number;
+  validUntil: string | null;
+}): Promise<ActionResult & { alreadyOnList?: boolean }> {
+  if (!input.catalogProductId || !input.name) {
+    return { ok: false, message: "That deal has nothing to add." };
+  }
+
+  const parts = [formatCents(input.priceCents)];
+  if (input.retailerName) parts.push(`at ${input.retailerName}`);
+  if (input.validUntil) {
+    parts.push(
+      `until ${new Date(`${input.validUntil}T12:00:00Z`).toLocaleDateString("en-CA", {
+        month: "short",
+        day: "numeric",
+      })}`,
+    );
+  }
+
+  const result = await addHouseholdNeed({
+    catalogProductId: input.catalogProductId,
+    name: input.name,
+    note: parts.join(" "),
+    // A person tapped this, so it is a manual add — not something the app
+    // decided on their behalf.
+    source: "MANUAL",
+  });
+
+  if (result.ok) revalidatePath("/shop/deals");
+  return result;
 }

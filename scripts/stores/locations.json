@@ -1,0 +1,145 @@
+[
+ {
+  "retailer": "Fortinos",
+  "external_id": "osm:w462892945",
+  "name": "Fortinos \u2014 Bird Boulevard",
+  "address": "Bird Boulevard",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7L 0G2",
+  "lat": 43.4070804,
+  "lon": -79.8043941
+ },
+ {
+  "retailer": "Fortinos",
+  "external_id": "osm:w198834232",
+  "name": "Fortinos \u2014 1059 Plains Road East",
+  "address": "1059 Plains Road East",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7T 4K1",
+  "lat": 43.326575,
+  "lon": -79.8315541
+ },
+ {
+  "retailer": "Fortinos",
+  "external_id": "osm:n276091459",
+  "name": "Fortinos \u2014 Guelph Line",
+  "address": "Guelph Line",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7P 4M8",
+  "lat": 43.3666024,
+  "lon": -79.8226891
+ },
+ {
+  "retailer": "Fortinos",
+  "external_id": "osm:n2707148173",
+  "name": "Fortinos \u2014 Timber Lane",
+  "address": "Timber Lane",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7L 1V1",
+  "lat": 43.3698466,
+  "lon": -79.7533374
+ },
+ {
+  "retailer": "No Frills",
+  "external_id": "osm:n455060781",
+  "name": "No Frills \u2014 571 Brant Street",
+  "address": "571 Brant Street",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7R 2G6",
+  "lat": 43.3296239,
+  "lon": -79.8018831
+ },
+ {
+  "retailer": "No Frills",
+  "external_id": "osm:n288341867",
+  "name": "No Frills \u2014 Coventry Way",
+  "address": "Coventry Way",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7P 4M7",
+  "lat": 43.3739726,
+  "lon": -79.8367727
+ },
+ {
+  "retailer": "Food Basics",
+  "external_id": "osm:n419372344",
+  "name": "Food Basics \u2014 Hampton Heath Road",
+  "address": "Hampton Heath Road",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7L 1C7",
+  "lat": 43.368534,
+  "lon": -79.7315328
+ },
+ {
+  "retailer": "Food Basics",
+  "external_id": "osm:n419364696",
+  "name": "Food Basics \u2014 Fairview Street",
+  "address": "Fairview Street",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7N 3L5",
+  "lat": 43.3554901,
+  "lon": -79.7849809
+ },
+ {
+  "retailer": "Food Basics",
+  "external_id": "osm:n288064679",
+  "name": "Food Basics \u2014 Guelph Line",
+  "address": "Guelph Line",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7P 3B6",
+  "lat": 43.3639967,
+  "lon": -79.8194313
+ },
+ {
+  "retailer": "Costco",
+  "external_id": "osm:w25482158",
+  "name": "Costco \u2014 1225 Brant Street",
+  "address": "1225 Brant Street",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7P 1X7",
+  "lat": 43.3443413,
+  "lon": -79.821387
+ },
+ {
+  "retailer": "Farm Boy",
+  "external_id": "osm:n7060850400",
+  "name": "Farm Boy \u2014 Walkers Line",
+  "address": "Walkers Line",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7M 0W3",
+  "lat": 43.3934668,
+  "lon": -79.8247607
+ },
+ {
+  "retailer": "Farm Boy",
+  "external_id": "osm:n7061164007",
+  "name": "Farm Boy \u2014 3230 Fairview Street",
+  "address": "3230 Fairview Street",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7N 3H5",
+  "lat": 43.3518338,
+  "lon": -79.7886164
+ },
+ {
+  "retailer": "Marilu's Market",
+  "external_id": "osm:n1713655329",
+  "name": "Marilu's Market \u2014 4025 New Street",
+  "address": "4025 New Street",
+  "city": "Burlington",
+  "province": "Ontario",
+  "postal_code": "L7L 1S8",
+  "lat": 43.3539743,
+  "lon": -79.7694457
+ }
+]

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, Info, RefreshCw, Tag, TrendingDown, TrendingUp } from "lucide-react";
+import { Check, Info, Plus, RefreshCw, Tag, TrendingDown, TrendingUp } from "lucide-react";
 import { ShopTabs } from "@/components/shell/shop-tabs";
 import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,7 +20,7 @@ import type { CatalogProduct } from "@/lib/data/catalog";
 import type { Store } from "@/lib/data/stores";
 import type { BestPrice } from "@/lib/data/deals";
 import type { LiveDeal } from "@/lib/data/flyer-deals";
-import { logSeenPrice, scanFlyerDeals } from "./actions";
+import { addDealToList, logSeenPrice, scanFlyerDeals } from "./actions";
 
 const VERDICT_STYLES: Record<PriceVerdictCode, { className: string; icon: typeof TrendingDown }> = {
   BEST_EVER: { className: "border-green bg-green/10 text-ink", icon: TrendingDown },
@@ -42,6 +42,30 @@ function formatDeadline(validUntil: string | null): string | null {
 }
 
 function DealCard({ deal }: { deal: LiveDeal }) {
+  const [adding, startAdd] = React.useTransition();
+  const [added, setAdded] = React.useState(false);
+  const showToast = useToast();
+  const router = useRouter();
+
+  function addToList() {
+    startAdd(async () => {
+      const res = await addDealToList({
+        catalogProductId: deal.catalogProductId,
+        name: deal.name,
+        retailerName: deal.retailerName,
+        priceCents: deal.priceCents,
+        validUntil: deal.validUntil,
+      });
+      if (!res.ok) {
+        showToast(res.message);
+        return;
+      }
+      setAdded(true);
+      showToast(res.alreadyOnList ? `${deal.name} is already on your list` : `${deal.name} added to your list`);
+      router.refresh();
+    });
+  }
+
   const deadline = formatDeadline(deal.validUntil);
               const strong = deal.verdict?.code === "BEST_EVER" || deal.verdict?.code === "GOOD";
   return (
@@ -105,6 +129,20 @@ function DealCard({ deal }: { deal: LiveDeal }) {
                         This flyer offer covers more than one product — check the wording above before counting on it.
                       </p>
                     ) : null}
+
+                    <button
+                      type="button"
+                      onClick={addToList}
+                      disabled={adding || added}
+                      className="mt-1 flex w-fit cursor-pointer items-center gap-1 rounded-(--radius-sm) border border-line px-2 py-1 text-[11px] font-semibold text-ink disabled:opacity-60"
+                    >
+                      {added ? (
+                        <Check className="h-3 w-3" aria-hidden="true" />
+                      ) : (
+                        <Plus className="h-3 w-3" aria-hidden="true" />
+                      )}
+                      {added ? "On your list" : adding ? "Adding…" : "Add to list"}
+                    </button>
                   </div>
                 </div>
   );
