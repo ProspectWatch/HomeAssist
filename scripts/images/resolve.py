@@ -82,7 +82,10 @@ def summary(title):
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return MISSING
-            time.sleep(0.5 * (attempt + 1))
+            # 429/503 mean "slow down", not "no such article". Backing off
+            # properly matters: a throttled lookup recorded as a miss is a
+            # product silently left without a photo that plainly has one.
+            time.sleep((2.0 if e.code in (429, 503) else 0.5) * (attempt + 1))
         except Exception:
             time.sleep(0.5 * (attempt + 1))
     return None
@@ -115,16 +118,27 @@ def relevant(product, page):
     return True
 
 def named_variety(product, page):
-    """Cultivar and brand articles drop the category word: the apple variety
-    "Granny Smith Apples" is filed under "Granny Smith". Accepted only when
-    the whole article title appears in the product name and is specific
-    enough to identify it — two words or more, so "Fruit" can never stand in
-    for "Passion Fruit"."""
+    """Cultivar, variety and brand articles drop the category word: "Granny
+    Smith Apples" is filed under "Granny Smith", "Havarti Cheese" under
+    "Havarti".
+
+    Accepted when the whole article title appears in the product name AND the
+    title is distinctive — either two or more words, or the product's
+    MODIFIER rather than its head noun. That last distinction is the whole
+    guard: "Havarti" identifies the cheese, while "Fruit" does not identify
+    "Passion Fruit" and "Tray" does not identify "Fruit Tray".
+    """
     if not page or page is MISSING or page.get("type") != "standard":
         return False
     title = [singular(w) for w in norm(page.get("title", ""))]
     pwords = [singular(w) for w in norm(product)]
-    return len(title) >= 2 and all(w in pwords for w in title)
+    core = [singular(w) for w in norm(product) if w not in QUALIFIERS]
+    if not title or not all(w in pwords for w in title):
+        return False
+    if len(title) >= 2:
+        return True
+    # Single-word article: only if it is a modifier, never the head noun.
+    return len(core) > 1 and title[0] in core[:-1]
 
 def resolve(item):
     pid, name = item
@@ -147,7 +161,7 @@ def resolve(item):
         }
     return {"id": pid, "name": name, "article": None, "thumb": None}
 
-def main(path, start, end, out, workers=8):
+def main(path, start, end, out, workers=5):
     products = json.load(open(path))["products"][start:end]
     items = [(p["id"], p["display_name"]) for p in products]
     with ThreadPoolExecutor(max_workers=workers) as ex:

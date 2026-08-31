@@ -8,17 +8,25 @@ licence and artist of each file rather than assuming one, and drops any image
 whose licence cannot be established — an uncredited CC BY-SA image is a
 licence breach, so no credit means no image.
 """
-import html, json, re, sys, time, urllib.parse, urllib.request
+import html, json, re, sys, time, urllib.error, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 UA = "HomeAssist/1.0 (household grocery app; info@prospect-watch.com)"
 API = "https://commons.wikimedia.org/w/api.php"
 
 def filename(url):
-    """Commons file name out of an upload.wikimedia.org URL."""
+    """Commons file name out of an upload.wikimedia.org URL.
+
+    Underscores are normalised to spaces because that is how the API reports
+    titles: a URL says "Gala_apples_on_cloth.jpg" and the response says
+    "Gala apples on cloth.jpg". Keying on the raw form silently dropped every
+    file whose name contains a space.
+    """
     path = urllib.parse.urlparse(url).path
     m = re.search(r"/commons/(?:thumb/)?[0-9a-f]/[0-9a-f]{2}/([^/]+)", path)
-    return urllib.parse.unquote(m.group(1)) if m else None
+    if not m:
+        return None
+    return urllib.parse.unquote(m.group(1)).replace("_", " ")
 
 def strip_html(value):
     text = re.sub(r"<[^>]+>", "", value or "")
@@ -32,12 +40,17 @@ def fetch(names):
     }
     req = urllib.request.Request(API + "?" + urllib.parse.urlencode(params),
                                  headers={"User-Agent": UA})
-    for attempt in range(3):
+    # Commons throttles bursts. A give-up here silently discards a licence
+    # that exists, which then discards a usable photo — so back off and keep
+    # trying rather than treating "slow down" as "no data".
+    for attempt in range(5):
         try:
             with urllib.request.urlopen(req, timeout=25) as r:
                 return json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            time.sleep((2.0 if e.code in (429, 503) else 0.6) * (attempt + 1))
         except Exception:
-            time.sleep(0.5 * (attempt + 1))
+            time.sleep(0.6 * (attempt + 1))
     return {}
 
 def main(inputs, out):
@@ -58,7 +71,7 @@ def main(inputs, out):
     batches = [names[i:i + 40] for i in range(0, len(names), 40)]
     def run(batch):
         data = fetch(batch)
-        time.sleep(0.1)
+        time.sleep(0.3)
         out = {}
         for page in (data.get("query", {}).get("pages", {}) or {}).values():
             title = page.get("title", "").removeprefix("File:")
@@ -74,7 +87,7 @@ def main(inputs, out):
                     "file_page": info.get("descriptionurl"),
                 }
         return out
-    with ThreadPoolExecutor(max_workers=4) as ex:
+    with ThreadPoolExecutor(max_workers=2) as ex:
         for part in ex.map(run, batches):
             meta.update(part)
 

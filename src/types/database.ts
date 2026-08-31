@@ -97,7 +97,10 @@ export type Database = {
           default_unit: string | null
           display_name: string
           id: string
+          image_attribution: string | null
+          image_license: string | null
           image_ready: boolean
+          image_source_url: string | null
           image_url: string | null
           manually_edited: boolean
           normalized_name: string
@@ -118,7 +121,10 @@ export type Database = {
           default_unit?: string | null
           display_name: string
           id: string
+          image_attribution?: string | null
+          image_license?: string | null
           image_ready?: boolean
+          image_source_url?: string | null
           image_url?: string | null
           manually_edited?: boolean
           normalized_name: string
@@ -139,7 +145,10 @@ export type Database = {
           default_unit?: string | null
           display_name?: string
           id?: string
+          image_attribution?: string | null
+          image_license?: string | null
           image_ready?: boolean
+          image_source_url?: string | null
           image_url?: string | null
           manually_edited?: boolean
           normalized_name?: string
