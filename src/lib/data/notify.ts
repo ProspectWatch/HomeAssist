@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { ScanClient } from "@/lib/data/retailer-scan";
 import { getPriceBook } from "@/lib/data/price-book";
 import {
   buildRegularBuyNotifications,
@@ -21,9 +22,13 @@ import {
  * part and are already stored by the time this runs; a missed notification is
  * a smaller loss than a scan that reports failure after doing its job.
  */
-export async function syncPriceNotifications(householdId: string): Promise<number> {
+export async function syncPriceNotifications(
+  householdId: string,
+  /** The scheduled run passes the service-role client; a cron has no session. */
+  client?: ScanClient,
+): Promise<number> {
   try {
-    const supabase = await createClient();
+    const supabase = client ?? (await createClient());
 
     const [{ data: watchRows }, { data: unreadRows }, book] = await Promise.all([
       supabase
@@ -38,7 +43,7 @@ export async function syncPriceNotifications(householdId: string): Promise<numbe
         .select("watch_item_id, title, kind")
         .eq("household_id", householdId)
         .eq("read", false),
-      getPriceBook(householdId),
+      getPriceBook(householdId, client),
     ]);
 
     const unreadWatchIds = new Set(

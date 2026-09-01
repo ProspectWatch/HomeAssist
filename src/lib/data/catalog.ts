@@ -154,6 +154,8 @@ export type HouseholdProductPreference = {
   preferred_variant: string | null;
   preferred_size: string | null;
   preferred_store: string | null;
+  /** The store this household always buys it from, when they have said. */
+  preferred_retailer_id: string | null;
   acceptable_brands: string[];
   acceptable_stores: string[];
   brand_rigidity: "EXACT_ONLY" | "PREFERRED" | "FLEXIBLE";
@@ -168,7 +170,7 @@ export async function getHouseholdPreferences(householdId: string | null): Promi
     const { data, error } = await supabase
       .from("household_product_preferences")
       .select(
-        "id, scope_type, scope_key, label, preferred_brand, preferred_variant, preferred_size, preferred_store, acceptable_brands, acceptable_stores, brand_rigidity, typical_quantity, notes",
+        "id, scope_type, scope_key, label, preferred_brand, preferred_variant, preferred_size, preferred_store, preferred_retailer_id, acceptable_brands, acceptable_stores, brand_rigidity, typical_quantity, notes",
       )
       .eq("household_id", householdId);
     if (error || !data) return [];

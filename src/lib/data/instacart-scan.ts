@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
-import { getScanTargets } from "@/lib/data/retailer-scan";
+import { getScanTargets, type ScanClient } from "@/lib/data/retailer-scan";
 import { matchToCatalog, type MatchableCatalogProduct } from "@/lib/retailers/matching";
 import {
   isWeightPriced,
@@ -65,8 +65,18 @@ export type InstacartScanResult =
     }
   | { status: "FAILED"; message: string };
 
-export async function runInstacartScan(householdId: string): Promise<InstacartScanResult> {
-  const supabase = await createClient();
+/**
+ * @param client the scheduled run passes the service-role client. Without it
+ * this falls back to the request-scoped one, which in a cron has no session at
+ * all — every read would come back empty and every write would be refused by
+ * RLS, silently, which is exactly how a scan comes to look like it ran and
+ * store nothing.
+ */
+export async function runInstacartScan(
+  householdId: string,
+  client?: ScanClient,
+): Promise<InstacartScanResult> {
+  const supabase = client ?? (await createClient());
   const startedAt = Date.now();
   const spent = () => Date.now() - startedAt;
 

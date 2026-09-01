@@ -32,6 +32,14 @@ export type GroceryItem = {
   flavourOptions: string[];
   /** The brand those flavours belong to, for labelling the picker. */
   flavourBrand: string | null;
+  /** The store tagged on this line, if any. */
+  retailerId: string | null;
+  /**
+   * True when the tag is a standing preference rather than a one-off on this
+   * line — the difference between "we always get this at Marilu's" and "grab
+   * it there this week".
+   */
+  storeRemembered: boolean;
 };
 
 type GroceryRow = {
@@ -45,6 +53,7 @@ type GroceryRow = {
   catalog_product_id: string | null;
   catalog_product: { category: string; subcategory: string | null } | null;
   variants: string[] | null;
+  retailer_id: string | null;
 };
 
 export async function getGroceryItems(householdId: string | null): Promise<GroceryItem[]> {
@@ -55,7 +64,7 @@ export async function getGroceryItems(householdId: string | null): Promise<Groce
       supabase
         .from("grocery_items")
         .select(
-          "id, name, qty, category, checked, has_deal, retailer:retailers(name), catalog_product_id, catalog_product:catalog_products(category, subcategory), variants",
+          "id, name, qty, category, checked, has_deal, retailer_id, retailer:retailers(name), catalog_product_id, catalog_product:catalog_products(category, subcategory), variants",
         )
         .eq("household_id", householdId)
         .order("created_at", { ascending: true }),
@@ -100,6 +109,17 @@ export async function getGroceryItems(householdId: string | null): Promise<Groce
         preferredMatchLabel: pref
           ? [pref.preferred_brand, pref.preferred_variant].filter(Boolean).join(" · ") || pref.label
           : null,
+        retailerId: row.retailer_id,
+        storeRemembered: Boolean(
+          row.catalog_product_id &&
+            preferences.some(
+              (p) =>
+                p.scope_type === "product" &&
+                p.scope_key === row.catalog_product_id &&
+                p.preferred_retailer_id === row.retailer_id &&
+                row.retailer_id !== null,
+            ),
+        ),
         variants: row.variants ?? [],
         flavourOptions: flavours?.variants ?? [],
         flavourBrand: flavours?.brand ?? null,
