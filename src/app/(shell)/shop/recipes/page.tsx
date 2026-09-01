@@ -47,13 +47,13 @@ export default async function RecipesPage() {
               href={`/shop/recipes/${recipe.id}`}
               className="flex gap-3 overflow-hidden rounded-(--radius-lg) border border-line bg-white shadow-(--shadow-card)"
             >
-              <div className="relative h-24 w-24 shrink-0 bg-cream">
+              <div className="relative h-24 w-24 shrink-0 bg-cream md:h-32 md:w-32">
                 {recipe.cover_image_url ? (
                   <Image
                     src={recipe.cover_image_url}
                     alt={recipe.name}
                     fill
-                    sizes="96px"
+                    sizes="(min-width: 48rem) 256px, 192px"
                     className="object-cover"
                   />
                 ) : (

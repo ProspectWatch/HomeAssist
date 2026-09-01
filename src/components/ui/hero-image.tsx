@@ -1,3 +1,4 @@
+import type * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -5,6 +6,7 @@ export function HeroImage({
   src,
   alt,
   height,
+  tabletHeight,
   radiusClassName = "rounded-(--radius-xl)",
   overlay,
   caption,
@@ -15,6 +17,8 @@ export function HeroImage({
   src: string;
   alt: string;
   height: number;
+  /** Taller on a tablet, where a phone-height band reads as a stripe. */
+  tabletHeight?: number;
   radiusClassName?: string;
   /** "fade" = bottom gradient only (Home hero); "full" = top-to-bottom scrim (Pantry/Deals hero with caption) */
   overlay?: "fade" | "full";
@@ -25,10 +29,22 @@ export function HeroImage({
 }) {
   return (
     <div
-      className={cn("relative overflow-hidden", radiusClassName, className)}
-      style={{ height }}
+      className={cn("relative h-(--hero-h) overflow-hidden md:h-(--hero-h-md)", radiusClassName, className)}
+      style={
+        {
+          "--hero-h": `${height}px`,
+          "--hero-h-md": `${tabletHeight ?? height}px`,
+        } as React.CSSProperties
+      }
     >
-      <Image src={src} alt={alt} fill sizes="402px" className="object-cover" priority={priority} />
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(min-width: 64rem) 896px, (min-width: 48rem) 672px, 402px"
+        className="object-cover"
+        priority={priority}
+      />
       {overlay === "fade" ? (
         <div
           className="absolute inset-x-0 bottom-0 h-[60px]"

@@ -73,6 +73,7 @@ export function AppChrome({
         <SheetRow label="Add Household Item" onClick={() => { setGlobalAddOpen(false); router.push("/rooms"); }} />
         <SheetRow label="Watch Product" onClick={() => openAddWatch("watch")} />
         <SheetRow label="Watch by Specs" onClick={() => { setGlobalAddOpen(false); setSpecOpen(true); }} />
+        <SheetRow label="Add to a Wish List" onClick={() => { setGlobalAddOpen(false); router.push("/wish"); }} />
         <SheetRow label="Add Owned Product" onClick={() => openAddWatch("own")} />
         <SheetRow
           label="Scan Receipt"

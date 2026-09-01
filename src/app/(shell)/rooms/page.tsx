@@ -42,6 +42,7 @@ export default async function RoomsPage() {
                 src={DEPARTMENT_HERO_IMAGES[dept.key]}
                 alt={dept.hero_placeholder}
                 height={96}
+                tabletHeight={150}
                 radiusClassName="rounded-none"
               />
               <div className="px-3 py-2.5">

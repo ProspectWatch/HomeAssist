@@ -88,7 +88,7 @@ export function ProductPicker({
               className="flex w-full cursor-pointer items-center gap-2.5 border-b border-line p-2 text-left last:border-b-0 hover:bg-cream"
             >
               <div className="h-10 w-10 shrink-0 overflow-hidden rounded-(--radius-sm) border border-line">
-                <ProductImage src={product.image_ready ? product.image_url : null} alt={product.display_name} height={40} />
+                <ProductImage src={product.image_ready ? product.image_url : null} alt={product.display_name} height={40} tabletHeight={56} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[13px] font-semibold text-ink">{product.display_name}</div>

@@ -31,6 +31,7 @@ export function SportsView({
         src={DEPARTMENT_HERO_IMAGES.sports}
         alt="Mudroom gear room"
         height={170}
+        tabletHeight={260}
         radiusClassName="rounded-b-(--radius-xl)"
       />
       <div className="px-5 pt-3.5 pb-1">

@@ -16,7 +16,7 @@ export default async function StoresPage() {
     <div className="pb-8">
       <TopBar title="Stores" subtitle="Where the prices come from" />
       <div className="mx-5 mb-3.5">
-        <HeroImage src={STORES_HERO_IMAGE} alt="Stores" height={160} radiusClassName="rounded-(--radius-lg)" />
+        <HeroImage src={STORES_HERO_IMAGE} alt="Stores" height={160} tabletHeight={240} radiusClassName="rounded-(--radius-lg)" />
       </div>
 
       {stores.length === 0 ? (

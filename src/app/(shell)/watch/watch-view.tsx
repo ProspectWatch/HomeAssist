@@ -123,8 +123,8 @@ export function WatchView({ items, specs }: { items: WatchItem[]; specs: WatchSp
             <div key={item.id} className="rounded-(--radius-lg) border border-line bg-white p-3.5 shadow-(--shadow-card)">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 items-start gap-2.5">
-                  <div className="w-12 shrink-0 overflow-hidden rounded-(--radius-sm)">
-                    <ProductImage src={item.image_url} alt={item.title} height={48} category={item.category} />
+                  <div className="w-12 shrink-0 overflow-hidden rounded-(--radius-sm) md:w-20">
+                    <ProductImage src={item.image_url} alt={item.title} height={48} tabletHeight={80} category={item.category} />
                   </div>
                   <div className="min-w-0">
                     <div className="text-[15px] font-semibold">{item.title}</div>

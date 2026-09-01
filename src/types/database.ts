@@ -1844,6 +1844,90 @@ export type Database = {
           },
         ]
       }
+      wish_list_items: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          household_id: string
+          id: string
+          image_url: string | null
+          notes: string | null
+          occasion: string
+          person_id: string | null
+          priority: number
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          household_id: string
+          id?: string
+          image_url?: string | null
+          notes?: string | null
+          occasion?: string
+          person_id?: string | null
+          priority?: number
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          household_id?: string
+          id?: string
+          image_url?: string | null
+          notes?: string | null
+          occasion?: string
+          person_id?: string | null
+          priority?: number
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      wish_list_offers: {
+        Row: {
+          brand: string | null
+          checked_at: string
+          created_at: string
+          currency: string | null
+          household_id: string
+          id: string
+          image_url: string | null
+          item_id: string
+          price_cents: number | null
+          site_name: string | null
+          url: string
+        }
+        Insert: {
+          brand?: string | null
+          checked_at?: string
+          created_at?: string
+          currency?: string | null
+          household_id: string
+          id?: string
+          image_url?: string | null
+          item_id: string
+          price_cents?: number | null
+          site_name?: string | null
+          url: string
+        }
+        Update: {
+          brand?: string | null
+          checked_at?: string
+          created_at?: string
+          currency?: string | null
+          household_id?: string
+          id?: string
+          image_url?: string | null
+          item_id?: string
+          price_cents?: number | null
+          site_name?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
       watch_items: {
         Row: {
           added_by: string | null

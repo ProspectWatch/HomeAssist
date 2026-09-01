@@ -8,6 +8,7 @@ const LINKS = [
   // time, because it lived inside a page the menu called "Search Settings".
   { href: "/family", label: "Family" },
   { href: "/shop/plan", label: "Meal Plan" },
+  { href: "/wish", label: "Wish Lists" },
   { href: "/shop/recipes", label: "Recipes" },
   { href: "/stores", label: "Stores" },
   { href: "/receipts", label: "Receipts" },
