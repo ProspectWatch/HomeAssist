@@ -59,8 +59,10 @@ export function AppChrome({
           type="button"
           aria-label="Add"
           onClick={() => setGlobalAddOpen(true)}
-          className="fixed right-4 z-[110] flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full bg-ink text-2xl text-white shadow-[0_10px_24px_rgba(29,29,27,.35)]"
-          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.75rem)" }}
+          // Clears the bottom bar on a phone; on a tablet there is no bottom
+          // bar to clear, so it sits in the corner where a floating action
+          // button belongs.
+          className="fixed right-4 bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] z-[110] flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full bg-ink text-2xl text-white shadow-[0_10px_24px_rgba(29,29,27,.35)] md:bottom-6"
         >
           <Plus className="h-6 w-6" />
         </button>

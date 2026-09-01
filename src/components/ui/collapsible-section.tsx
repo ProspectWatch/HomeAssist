@@ -86,12 +86,24 @@ export function CollapsibleSection({
   count,
   open,
   onToggle,
+  columns = 2,
   children,
 }: {
   title: string;
   count: number;
   open: boolean;
   onToggle: () => void;
+  /**
+   * How many columns the rows fall into on a wide screen. Two by default: at
+   * that width a single column of short rows is mostly whitespace, and halving
+   * the list halves the scrolling. One where a row needs the width.
+   *
+   * Deliberately `lg` and not `md`. An iPad in portrait is 820px, and two
+   * columns there make each card 298px — narrower than the 350px it gets on a
+   * phone, so names truncate MORE on the bigger screen. Portrait stays one
+   * wide column; landscape gets the second one.
+   */
+  columns?: 1 | 2;
   children: React.ReactNode;
 }) {
   return (
@@ -119,7 +131,17 @@ export function CollapsibleSection({
         </span>
         <span className="text-[11px] text-muted2">{count}</span>
       </button>
-      {open ? <div className="flex flex-col gap-2 px-5 pt-0.5 pb-2">{children}</div> : null}
+      {open ? (
+        <div
+          className={
+            columns === 2
+              ? "grid grid-cols-1 gap-2 px-5 pt-0.5 pb-2 lg:grid-cols-2"
+              : "flex flex-col gap-2 px-5 pt-0.5 pb-2"
+          }
+        >
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }

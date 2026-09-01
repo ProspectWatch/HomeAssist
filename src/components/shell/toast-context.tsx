@@ -23,8 +23,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {message ? (
         <div
-          className="fixed left-1/2 z-[200] max-w-[80%] -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-4 py-2.5 text-center text-[12.5px] text-white shadow-[0_8px_20px_rgba(29,29,27,.3)]"
-          style={{ bottom: "calc(var(--bottom-nav-height) + env(safe-area-inset-bottom) + 0.75rem)" }}
+          // Sits above the bottom bar on a phone; on a tablet there is no bar
+          // there to clear, so it comes back to the bottom edge.
+          className="fixed bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] left-1/2 z-[200] max-w-[80%] -translate-x-1/2 rounded-full bg-ink px-4 py-2.5 text-center text-[12.5px] whitespace-nowrap text-white shadow-[0_8px_20px_rgba(29,29,27,.3)] md:bottom-6"
         >
           {message}
         </div>

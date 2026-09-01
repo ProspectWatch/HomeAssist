@@ -49,6 +49,15 @@
   --background: var(--color-cream);
   --foreground: var(--color-ink);
   --bottom-nav-height: 4.25rem;
+  /* The tablet side rail. Zero below its breakpoint so the same calc()
+     works on a phone, where the rail is not rendered at all. */
+  --rail-width: 0rem;
+}
+
+@media (min-width: 48rem) {
+  :root {
+    --rail-width: 11rem;
+  }
 }
 
 html,

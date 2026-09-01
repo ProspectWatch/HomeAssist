@@ -143,7 +143,6 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
               open={sections.isOpen(group.label)}
               onToggle={() => sections.toggle(group.label)}
             >
-              <div className="flex flex-col gap-2">
                 {group.items.map((item) => {
                   const badge = storeBadge(item.retailer?.name);
                   return (
@@ -205,7 +204,6 @@ export function GroceryListView({ items }: { items: GroceryItem[] }) {
                     </div>
                   );
                 })}
-              </div>
             </CollapsibleSection>
           ))}
         </div>

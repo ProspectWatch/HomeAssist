@@ -28,7 +28,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale: pinning it to 1 blocks pinch-zoom, which is a real
+  // accessibility problem and a worse one on a tablet, where zooming a
+  // photograph or a small price is an ordinary thing to want.
   viewportFit: "cover",
   themeColor: "#faf8f4",
 };
