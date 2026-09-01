@@ -5,6 +5,7 @@ import { runHouseholdAction, type ActionResult } from "@/lib/actions/helpers";
 import { runHouseholdScan } from "@/lib/data/retailer-scan";
 import { runFlyerScan } from "@/lib/data/flyer-scan";
 import { runInstacartScan } from "@/lib/data/instacart-scan";
+import { syncPriceNotifications } from "@/lib/data/notify";
 import { addHouseholdNeed } from "@/app/(shell)/shop/pantry/actions";
 import { formatCents } from "@/lib/money";
 
@@ -12,38 +13,6 @@ export type ScanActionResult = ActionResult & {
   summary?: string;
   perRetailer?: { retailerName: string; ok: boolean; note: string }[];
 };
-
-/**
- * Manual "check prices now" (§13). Reports honestly per retailer: a blocked or
- * failing retailer is surfaced as unavailable, never as a store that was
- * successfully checked and simply had no deals.
- */
-export async function runManualScan(): Promise<ScanActionResult> {
-  return runHouseholdAction<ScanActionResult>(async (_supabase, householdId) => {
-    const result = await runHouseholdScan(householdId);
-
-    const perRetailer = result.outcomes.map((o) =>
-      o.status === "COMPLETE"
-        ? {
-            retailerName: o.retailerName,
-            ok: true,
-            note: `${o.observations.length} price${o.observations.length === 1 ? "" : "s"} found`,
-          }
-        : { retailerName: o.retailerName, ok: false, note: `Scan unavailable — ${o.reason}` },
-    );
-
-    const okCount = perRetailer.filter((r) => r.ok).length;
-    revalidatePath("/shop/deals");
-    revalidatePath("/shop/list");
-    revalidatePath("/home");
-
-    return {
-      ok: true,
-      summary: `${okCount} / ${result.outcomes.length} retailers checked · ${result.observationsStored} price observations stored`,
-      perRetailer,
-    };
-  });
-}
 
 /**
  * Records a price seen on a shelf or in a flyer without buying it.
@@ -114,8 +83,14 @@ export async function scanFlyerDeals(): Promise<FlyerScanActionResult> {
       return { ok: false, message: result.message };
     }
 
+    // New prices are the only moment anything can newly be true, so this is
+    // where notifications get derived. It never fails the scan: the prices are
+    // already stored and are the valuable part.
+    await syncPriceNotifications(householdId);
+
     revalidatePath("/shop/deals");
     revalidatePath("/home");
+    revalidatePath("/notifications");
 
     const placed = result.observations.length;
     const coverage =
@@ -218,9 +193,12 @@ export async function scanMarilusPrices(): Promise<InstacartScanActionResult> {
     const result = await runInstacartScan(householdId);
     if (result.status === "FAILED") return { ok: false, message: result.message };
 
+    await syncPriceNotifications(householdId);
+
     revalidatePath("/shop/deals");
     revalidatePath("/price-history");
     revalidatePath("/home");
+    revalidatePath("/notifications");
 
     const parts = [
       `${result.storefrontSeen} featured products read`,

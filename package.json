@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/check-rls-coverage.mjs && next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:rls": "node scripts/check-rls-coverage.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.122.0",

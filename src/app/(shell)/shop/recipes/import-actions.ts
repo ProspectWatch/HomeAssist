@@ -26,10 +26,6 @@ export async function importRecipeFromUrl(url: string): Promise<RecipeImportResu
   return parseRecipeFromHtml(page.html, page.finalUrl);
 }
 
-export async function screenshotImportAvailable(): Promise<boolean> {
-  return isScreenshotImportConfigured();
-}
-
 /**
  * Read a recipe from a screenshot.
  *

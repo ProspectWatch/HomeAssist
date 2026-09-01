@@ -1,3 +1,4 @@
+import { getHouseholdPeople } from "@/lib/data/people";
 import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { getAthletes } from "@/lib/data/athletes";
 import { getWatchItems } from "@/lib/data/watch";
@@ -5,7 +6,11 @@ import { SportsView } from "./sports-view";
 
 export default async function SportsPage() {
   const householdId = await getCurrentHouseholdId();
-  const [athletes, allWatch] = await Promise.all([getAthletes(householdId), getWatchItems(householdId)]);
+  const [athletes, allWatch, people] = await Promise.all([
+    getAthletes(householdId),
+    getWatchItems(householdId),
+    getHouseholdPeople(householdId),
+  ]);
   const equipmentWatch = allWatch.filter((w) => w.department_key === "sports");
   const watchCountByAthlete = new Map<string, number>();
   for (const w of equipmentWatch) {
@@ -14,5 +19,12 @@ export default async function SportsPage() {
     if (athlete) watchCountByAthlete.set(athlete.id, (watchCountByAthlete.get(athlete.id) ?? 0) + 1);
   }
 
-  return <SportsView athletes={athletes} watchCountByAthlete={watchCountByAthlete} equipmentWatch={equipmentWatch} />;
+  return (
+    <SportsView
+      athletes={athletes}
+      watchCountByAthlete={watchCountByAthlete}
+      equipmentWatch={equipmentWatch}
+      people={people}
+    />
+  );
 }
