@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 import {
   buildPriceBook,
@@ -68,8 +70,12 @@ export function unitPriceCents(row: {
   return row.line_total_cents;
 }
 
-export async function getPriceSightings(householdId: string): Promise<PriceSighting[]> {
-  const supabase = await createClient();
+export async function getPriceSightings(
+  householdId: string,
+  /** The scheduled run passes the service-role client; a cron has no session. */
+  client?: SupabaseClient<Database>,
+): Promise<PriceSighting[]> {
+  const supabase = client ?? (await createClient());
 
   const [purchases, observations] = await Promise.all([
     readAllPages<PurchaseRow>((from, to) =>
@@ -132,10 +138,13 @@ export async function getPriceSightings(householdId: string): Promise<PriceSight
   return sightings;
 }
 
-export async function getPriceBook(householdId: string | null): Promise<Map<string, PriceBookEntry>> {
+export async function getPriceBook(
+  householdId: string | null,
+  client?: SupabaseClient<Database>,
+): Promise<Map<string, PriceBookEntry>> {
   if (!householdId) return new Map();
   try {
-    return buildPriceBook(await getPriceSightings(householdId));
+    return buildPriceBook(await getPriceSightings(householdId, client));
   } catch {
     return new Map();
   }

@@ -1,6 +1,8 @@
 import { createAdminClient, hasAdminCredentials } from "@/lib/supabase/admin";
 import { isCronAuthorized } from "@/lib/auth/cron-auth";
 import { runFlyerScan } from "@/lib/data/flyer-scan";
+import { runInstacartScan } from "@/lib/data/instacart-scan";
+import { syncPriceNotifications } from "@/lib/data/notify";
 
 /**
  * Scheduled price scan.
@@ -53,6 +55,7 @@ export async function GET(request: Request) {
   const households = (data ?? []) as { id: string; name: string | null }[];
   const results: {
     household: string;
+    source: string;
     status: string;
     searched?: number;
     stored?: number;
@@ -60,25 +63,62 @@ export async function GET(request: Request) {
   }[] = [];
 
   for (const household of households) {
+    const name = household.name ?? household.id;
+
+    // The flyers, for every store that publishes one.
     try {
       const result = await runFlyerScan(household.id, supabase);
       results.push(
         result.status === "COMPLETE"
           ? {
-              household: household.name ?? household.id,
+              household: name,
+              source: "flyers",
               status: "COMPLETE",
               searched: result.targetsRequested,
               stored: result.stored,
             }
-          : { household: household.name ?? household.id, status: "FAILED", reason: result.message },
+          : { household: name, source: "flyers", status: "FAILED", reason: result.message },
       );
     } catch (cause) {
       // One household failing must not stop the others.
       results.push({
-        household: household.name ?? household.id,
+        household: name,
+        source: "flyers",
         status: "FAILED",
         reason: cause instanceof Error ? cause.message : "Unknown error",
       });
+    }
+
+    // And Marilu's, which publishes no flyer at all — the reason it had never
+    // been priced by anything on a schedule. A separate try so a refusal there
+    // cannot cost the flyer prices already stored above.
+    try {
+      const result = await runInstacartScan(household.id, supabase);
+      results.push(
+        result.status === "COMPLETE"
+          ? {
+              household: name,
+              source: "marilus",
+              status: "COMPLETE",
+              searched: result.targetsRequested,
+              stored: result.stored,
+            }
+          : { household: name, source: "marilus", status: "FAILED", reason: result.message },
+      );
+    } catch (cause) {
+      results.push({
+        household: name,
+        source: "marilus",
+        status: "FAILED",
+        reason: cause instanceof Error ? cause.message : "Unknown error",
+      });
+    }
+
+    // Alerts are derived once, after both sources have had their say.
+    try {
+      await syncPriceNotifications(household.id, supabase);
+    } catch {
+      // A missed alert must never fail a scan that stored real prices.
     }
   }
 
