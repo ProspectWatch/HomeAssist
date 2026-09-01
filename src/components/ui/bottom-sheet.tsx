@@ -23,13 +23,18 @@ export function BottomSheet({
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        // A sheet rising from the bottom edge is right on a phone, where that
+        // edge is under your thumb. On a tablet it is the far side of a large
+        // screen and the content ends up in a strip along the bottom, so above
+        // the breakpoint the same sheet becomes a centred dialog.
         className={cn(
-          "absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-[22px] bg-white px-5 pt-2.5 pb-8 shadow-[0_-12px_28px_rgba(29,29,27,.2)]",
+          "absolute inset-x-0 bottom-0 mx-auto max-w-md rounded-t-[22px] bg-white px-5 pt-2.5 pb-[calc(env(safe-area-inset-bottom)+1.75rem)] shadow-[0_-12px_28px_rgba(29,29,27,.2)]",
+          "md:inset-x-auto md:top-1/2 md:bottom-auto md:left-1/2 md:max-h-[86vh] md:w-[30rem] md:max-w-[calc(100vw-3rem)] md:-translate-x-1/2 md:-translate-y-1/2 md:overflow-y-auto md:rounded-[22px] md:pb-6 md:shadow-[0_18px_48px_rgba(29,29,27,.28)]",
           className,
         )}
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1.75rem)" }}
       >
-        <div className="mx-auto mb-4 mt-1 h-1 w-9 rounded-full bg-line" />
+        {/* The grab handle is a phone affordance for a sheet you can drag. */}
+        <div className="mx-auto mt-1 mb-4 h-1 w-9 rounded-full bg-line md:hidden" />
         {children}
       </div>
     </div>

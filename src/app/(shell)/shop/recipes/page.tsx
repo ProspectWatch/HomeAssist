@@ -40,7 +40,7 @@ export default async function RecipesPage() {
           />
         </div>
       ) : (
-        <div className="flex flex-col gap-3 px-5">
+        <div className="grid grid-cols-1 gap-3 px-5 lg:grid-cols-2">
           {recipes.map((recipe) => (
             <Link
               key={recipe.id}

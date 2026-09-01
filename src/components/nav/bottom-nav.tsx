@@ -85,13 +85,19 @@ const TABS = [
   },
 ] as const;
 
+export { TABS as NAV_TABS };
+
 export function BottomNav() {
   const pathname = usePathname();
 
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-white"
+      // Below the tablet breakpoint only. On a wider screen the side rail
+      // takes over: a bar pinned to the bottom of an iPad is a long way from
+      // anywhere your hands are, and it spends a strip of a large screen on
+      // five links.
+      className="fixed inset-x-0 bottom-0 z-50 border-t border-line bg-white md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="mx-auto flex max-w-md items-stretch justify-around px-1 pt-2 pb-1">
