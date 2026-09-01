@@ -250,6 +250,7 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
           src={PANTRY_HERO_IMAGE}
           alt="Pantry shelves"
           height={180}
+          tabletHeight={280}
           radiusClassName="rounded-(--radius-xl)"
           overlay="full"
           caption="Regular Buys"
@@ -283,8 +284,8 @@ export function PantryView({ items }: { items: PantryProduct[] }) {
               className="flex flex-col gap-2 rounded-(--radius-md) border border-line bg-white p-3"
             >
               <div className="flex items-center gap-3">
-                <div className="w-14 shrink-0 overflow-hidden rounded-(--radius-sm)">
-                  <ProductImage src={item.image_url} alt={item.title} height={56} category={item.category} />
+                <div className="w-14 shrink-0 overflow-hidden rounded-(--radius-sm) md:w-20">
+                  <ProductImage src={item.image_url} alt={item.title} height={56} tabletHeight={80} category={item.category} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[14px] leading-tight font-semibold">{item.title}</div>

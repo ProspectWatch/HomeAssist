@@ -32,7 +32,7 @@ export function DepartmentView({
 
   return (
     <div className="pb-8">
-      <HeroImage src={heroSrc} alt={dept.hero_placeholder} height={170} radiusClassName="rounded-b-(--radius-xl)" />
+      <HeroImage src={heroSrc} alt={dept.hero_placeholder} height={170} tabletHeight={260} radiusClassName="rounded-b-(--radius-xl)" />
       <div className="px-5 pt-3.5 pb-1">
         <div className="font-serif text-2xl">{dept.name}</div>
       </div>
@@ -92,7 +92,7 @@ export function DepartmentView({
           <div className="grid grid-cols-2 gap-2.5 px-5">
             {regularBuys.map((item) => (
               <div key={item.id} className="overflow-hidden rounded-(--radius-md) border border-line bg-white shadow-(--shadow-card)">
-                <ProductImage src={item.image_url} alt={item.title} height={88} />
+                <ProductImage src={item.image_url} alt={item.title} height={88} tabletHeight={132} />
                 <div className="p-3">
                   <div className="text-[13px] font-semibold leading-tight">{item.title}</div>
                   <div className="mt-2 flex items-baseline justify-between">

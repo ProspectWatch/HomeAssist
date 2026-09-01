@@ -1,3 +1,4 @@
+import type * as React from "react";
 import Image from "next/image";
 import {
   Apple,
@@ -51,26 +52,51 @@ export function ProductImage({
   src,
   alt,
   height,
+  tabletHeight,
   category,
   className,
 }: {
   src: string | null;
   alt: string;
   height: number;
+  /**
+   * The height on a tablet. A thumbnail sized for a phone is a postage stamp
+   * on an iPad, and the photograph is often the fastest way to recognise a
+   * product — that is the whole reason for having one. Defaults to the phone
+   * height, so a caller that has not thought about it is unchanged.
+   */
+  tabletHeight?: number;
   category?: string | null;
   className?: string;
 }) {
   const FallbackIcon = (category && CATEGORY_ICONS[category]) || Package;
+  const tablet = tabletHeight ?? height;
 
   return (
-    <div className={cn("relative bg-white", className)} style={{ height }}>
+    <div
+      className={cn("relative h-(--img-h) bg-white md:h-(--img-h-md)", className)}
+      style={
+        {
+          "--img-h": `${height}px`,
+          "--img-h-md": `${tablet}px`,
+        } as React.CSSProperties
+      }
+    >
       {src ? (
         <div className="absolute inset-[12%]">
-          <Image src={src} alt={alt} fill sizes="200px" className="object-contain" />
+          <Image
+            src={src}
+            alt={alt}
+            fill
+            // Tells the browser the bigger box exists, so a tablet is not
+            // served the phone-sized file and then asked to scale it up.
+            sizes={`(min-width: 48rem) ${tablet * 2}px, ${height * 2}px`}
+            className="object-contain"
+          />
         </div>
       ) : (
         <div className="flex h-full items-center justify-center bg-cream/60">
-          <FallbackIcon className="h-7 w-7 text-muted2" aria-hidden="true" />
+          <FallbackIcon className="h-7 w-7 text-muted2 md:h-9 md:w-9" aria-hidden="true" />
         </div>
       )}
     </div>

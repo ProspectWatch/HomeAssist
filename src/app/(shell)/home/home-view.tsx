@@ -65,7 +65,7 @@ export function HomeView({
       </div>
 
       <div className="mx-5 mb-3.5">
-        <HeroImage src={HOME_HERO_IMAGE} alt="Kitchen" height={220} radiusClassName="rounded-(--radius-xl)" overlay="fade" priority />
+        <HeroImage src={HOME_HERO_IMAGE} alt="Kitchen" height={220} tabletHeight={340} radiusClassName="rounded-(--radius-xl)" overlay="fade" priority />
       </div>
 
       <div className="mx-5 mb-3 grid grid-cols-2 gap-2">
@@ -166,7 +166,7 @@ export function HomeView({
             href={dept.key === "kitchen" ? "/shop/pantry" : dept.key === "sports" ? "/rooms/sports" : `/rooms/${dept.key}`}
             className="overflow-hidden rounded-(--radius-sm) border border-line bg-white"
           >
-            <HeroImage src={DEPARTMENT_HERO_IMAGES[dept.key]} alt={dept.hero_placeholder} height={64} radiusClassName="rounded-none" />
+            <HeroImage src={DEPARTMENT_HERO_IMAGES[dept.key]} alt={dept.hero_placeholder} height={64} tabletHeight={96} radiusClassName="rounded-none" />
             <div className="px-2 py-1.5">
               <div className="text-[10.5px] leading-tight font-semibold">{dept.name}</div>
             </div>

@@ -120,7 +120,7 @@ export function ReceiptsView({
       <div className="px-5 pt-4 pb-3.5">
         <h1 className="mb-3 font-serif text-[26px] leading-tight text-ink">Receipts</h1>
         <div className="mb-3">
-          <HeroImage src={RECEIPTS_HERO_IMAGE} alt="Receipts" height={150} radiusClassName="rounded-(--radius-lg)" />
+          <HeroImage src={RECEIPTS_HERO_IMAGE} alt="Receipts" height={150} tabletHeight={230} radiusClassName="rounded-(--radius-lg)" />
         </div>
 
         {!extractionConfigured ? (

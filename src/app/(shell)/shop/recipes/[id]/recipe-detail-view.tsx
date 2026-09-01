@@ -92,7 +92,7 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
   return (
     <div className="pb-8">
       {/* The cover, or the room to add one. */}
-      <div className="relative mb-3.5 h-[190px] overflow-hidden rounded-b-(--radius-xl) bg-cream">
+      <div className="relative mb-3.5 h-[190px] overflow-hidden rounded-b-(--radius-xl) bg-cream md:h-[320px] md:rounded-(--radius-xl)">
         {cover ? (
           <Image
             src={cover.image_url}
@@ -276,13 +276,13 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
               key={photo.id}
               type="button"
               onClick={() => setViewing(photo)}
-              className="relative h-[104px] w-[104px] shrink-0 cursor-pointer overflow-hidden rounded-(--radius-md) border border-line"
+              className="relative h-[104px] w-[104px] shrink-0 cursor-pointer overflow-hidden rounded-(--radius-md) border border-line md:h-[168px] md:w-[168px]"
             >
               <Image
                 src={photo.image_url}
                 alt={photo.caption ?? `Photo of ${recipe.name}`}
                 fill
-                sizes="104px"
+                sizes="(min-width: 48rem) 336px, 208px"
                 className="object-cover"
               />
             </button>
@@ -293,7 +293,7 @@ export function RecipeDetailView({ kitchen }: { kitchen: RecipeKitchen }) {
       <BottomSheet open={viewing !== null} onClose={() => setViewing(null)}>
         {viewing ? (
           <>
-            <div className="relative mb-3 h-[240px] overflow-hidden rounded-(--radius-md) bg-cream">
+            <div className="relative mb-3 h-[240px] overflow-hidden rounded-(--radius-md) bg-cream md:h-[420px]">
               <Image
                 src={viewing.image_url}
                 alt={viewing.caption ?? `Photo of ${recipe.name}`}
