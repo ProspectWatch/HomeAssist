@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Search, Bell, Plus, Camera, Tag, Eye } from "lucide-react";
 import { HeroImage } from "@/components/ui/hero-image";
 import { ProductImage } from "@/components/ui/product-image";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useAppShell } from "@/components/shell/app-shell-context";
-import { useToast } from "@/components/shell/toast-context";
 import { HOME_HERO_IMAGE, DEPARTMENT_HERO_IMAGES, productImage } from "@/lib/assets";
 import { formatCents } from "@/lib/money";
 import type { HomeStats } from "@/lib/data/home";
@@ -32,7 +32,7 @@ export function HomeView({
   inventory: InventoryCounts;
 }) {
   const { openAddWatch } = useAppShell();
-  const showToast = useToast();
+  const router = useRouter();
 
   return (
     <div className="pb-6">
@@ -99,7 +99,7 @@ export function HomeView({
           icon={Camera}
           label="Scan Receipt"
           href="/receipts"
-          onClick={() => showToast("Camera would open here")}
+          onClick={() => router.push("/receipts")}
         />
         <QuickAction icon={Tag} label="Check Price" href="/shop/deals" />
         <QuickAction icon={Eye} label="Add to Watch" onClick={() => openAddWatch("watch")} />

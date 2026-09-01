@@ -80,7 +80,6 @@ export function AppChrome({
           onClick={() => {
             setGlobalAddOpen(false);
             router.push("/receipts");
-            showToast("Camera would open here");
           }}
         />
         <SheetRow label="Paste Product Link" onClick={() => { setGlobalAddOpen(false); setUrlOpen(true); }} />
