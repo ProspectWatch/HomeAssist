@@ -2,9 +2,12 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentHouseholdId } from "@/lib/supabase/household";
-import { searchCatalogProducts } from "@/lib/data/catalog";
+import { getHouseholdSearchProducts, searchCatalogProducts } from "@/lib/data/catalog";
+import { searchCatalog } from "@/lib/catalog-search";
 import { getPriceBook } from "@/lib/data/price-book";
 import { formatCents } from "@/lib/money";
+import { isMultiItemOffer } from "@/lib/retailers/flyers/flipp";
+import { isInformative, sortByUsefulness, MAX_UNPRICED_RESULTS } from "@/lib/search/ranking";
 import {
   bestOfferByProduct,
   classifySource,
@@ -39,6 +42,12 @@ export type SearchResult = {
   deal: string | null;
   href: string | null;
   isRegularBuy: boolean;
+  /**
+   * True when `id` is a catalogue product id, so its price can be looked up
+   * on demand. False for list rows, recipes and receipts, which have no price
+   * to go and check.
+   */
+  checkable: boolean;
 };
 
 export type SearchGroup = { label: string; items: SearchResult[] };
@@ -54,8 +63,13 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
     const like = `%${q}%`;
     const today = new Date().toISOString().slice(0, 10);
 
-    const [products, groceryRes, receiptsRes, prefRes, recipesRes, book] = await Promise.all([
-      searchCatalogProducts(q, 25),
+    const [products, ownProducts, groceryRes, receiptsRes, prefRes, recipesRes, book] =
+      await Promise.all([
+      searchCatalogProducts(q, 40),
+      // The household's own branded products — Doritos, Lay's, Heinz — live in
+      // `products`, not the shared catalogue, and were not searched at all. A
+      // search for a brand this family actually buys found nothing.
+      getHouseholdSearchProducts(householdId),
       supabase
         .from("grocery_items")
         .select("id, name, qty, checked")
@@ -82,17 +96,21 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
       ((prefRes.data ?? []) as { scope_key: string }[]).map((r) => r.scope_key),
     );
 
+    const ownMatches = searchCatalog(ownProducts, q, 15);
+    const seen = new Set(products.map((p) => p.id));
+    const allProducts = [...products, ...ownMatches.filter((p) => !seen.has(p.id))];
+
     // Every current price for exactly the products this search returned —
     // flyers, the shops' own listings (Marilu's included), and receipts. This
     // used to filter to FLYER, which hid the 30 Marilu's prices sitting in the
     // same table from a search for anything Marilu's sells.
-    const productIds = products.map((p) => p.id);
+    const productIds = allProducts.map((p) => p.id);
     const offers: ProductOffer[] = [];
     if (productIds.length > 0) {
       const { data: priceRows } = await supabase
         .from("retailer_price_observations")
         .select(
-          "catalog_product_id, observed_price_cents, observed_at, valid_until, source_type, retailer:retailers(name)",
+          "catalog_product_id, observed_price_cents, observed_at, valid_until, source_type, raw_name, retailer:retailers(name)",
         )
         .eq("household_id", householdId)
         .in("catalog_product_id", productIds)
@@ -105,6 +123,7 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
         observed_at: string;
         valid_until: string | null;
         source_type: string;
+        raw_name: string | null;
         retailer: { name: string } | null;
       };
       for (const row of (priceRows ?? []) as unknown as PriceRow[]) {
@@ -116,12 +135,20 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
           source: classifySource(row.source_type),
           observedOn: row.observed_at.slice(0, 10),
           validUntil: row.valid_until ? row.valid_until.slice(0, 10) : null,
+          coversSeveralItems: isMultiItemOffer(row.raw_name),
         });
       }
     }
     const bestByProduct = bestOfferByProduct(offers, today);
 
-    const productItems: SearchResult[] = products.map((product) => {
+    // "steak" matched 17 catalogue entries and none of them had a price, so
+    // the answer to "where is this on sale" was buried under generic rows the
+    // app knows nothing about. Split them: anything with a real price or that
+    // the household actually buys comes first, the rest is a short tail.
+    const pricedItems: SearchResult[] = [];
+    const otherItems: SearchResult[] = [];
+
+    for (const product of allProducts) {
       const entry = book.get(product.id);
       const offer = bestByProduct.get(product.id);
       const parts = [
@@ -136,15 +163,20 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
           : null,
       ].filter((p): p is string => !!p);
 
-      return {
+      const item: SearchResult = {
         id: product.id,
         title: product.display_name,
         sub: parts.join(" · ") || null,
         deal: offer ? describeOffer(offer, today) : null,
         href: "/shop/deals",
         isRegularBuy: regularBuys.has(product.id),
+        checkable: true,
       };
-    });
+
+      if (isInformative({ ...item, hasPrice: !!offer || !!entry }))
+        pricedItems.push(item);
+      else otherItems.push(item);
+    }
 
     // Receipts match on the store name, which the query above can't filter
     // through the joined table, so it's applied here on real rows.
@@ -155,45 +187,71 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
       total_cents: number | null;
       retailer: { name: string } | null;
     };
-    const receiptItems: SearchResult[] = ((receiptsRes.data ?? []) as unknown as ReceiptRow[])
+    const receiptItems: SearchResult[] = (
+      (receiptsRes.data ?? []) as unknown as ReceiptRow[]
+    )
       .filter((r) => (r.retailer?.name ?? "").toLowerCase().includes(needle))
       .slice(0, 10)
       .map((r) => ({
         id: r.id,
         title: r.retailer?.name ?? "Unknown store",
-        sub: [r.purchased_at, r.total_cents != null ? formatCents(r.total_cents) : null]
+        sub: [
+          r.purchased_at,
+          r.total_cents != null ? formatCents(r.total_cents) : null,
+        ]
           .filter(Boolean)
           .join(" · "),
         deal: null,
         href: `/receipts/${r.id}`,
         isRegularBuy: false,
+        checkable: false,
       }));
 
-    type GroceryRow = { id: string; name: string; qty: string | null; checked: boolean };
-    const groceryItems: SearchResult[] = ((groceryRes.data ?? []) as GroceryRow[]).map((row) => ({
+    type GroceryRow = {
+      id: string;
+      name: string;
+      qty: string | null;
+      checked: boolean;
+    };
+    const groceryItems: SearchResult[] = (
+      (groceryRes.data ?? []) as GroceryRow[]
+    ).map((row) => ({
       id: row.id,
       title: row.name,
-      sub: [row.qty, row.checked ? "done" : null].filter(Boolean).join(" · ") || null,
+      sub:
+        [row.qty, row.checked ? "done" : null].filter(Boolean).join(" · ") ||
+        null,
       deal: null,
       href: "/shop/list",
       isRegularBuy: false,
+      checkable: false,
     }));
 
     type RecipeRow = { id: string; name: string };
-    const recipeItems: SearchResult[] = ((recipesRes.data ?? []) as RecipeRow[]).map((row) => ({
+    const recipeItems: SearchResult[] = (
+      (recipesRes.data ?? []) as RecipeRow[]
+    ).map((row) => ({
       id: row.id,
       title: row.name,
       sub: null,
       deal: null,
       href: `/shop/recipes/${row.id}`,
       isRegularBuy: false,
+      checkable: false,
     }));
 
     return [
-      { label: "Products", items: productItems },
+      { label: "Products", items: sortByUsefulness(pricedItems) },
       { label: "On your list", items: groceryItems },
       { label: "Recipes", items: recipeItems },
       { label: "Receipts", items: receiptItems },
+      // Catalogue entries with no price and no history. Real answers, but
+      // weaker ones, so they sit at the bottom and are capped rather than
+      // filling the screen.
+      {
+        label: "Other matches",
+        items: otherItems.slice(0, MAX_UNPRICED_RESULTS),
+      },
     ].filter((g) => g.items.length > 0);
   } catch {
     return [];

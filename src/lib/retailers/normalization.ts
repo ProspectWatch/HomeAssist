@@ -25,10 +25,35 @@ const STOP_WORDS = new Set([
   "size", "each", "ea", "fresh", "product", "brand", "new",
 ]);
 
+/**
+ * Folds a plural onto its singular so the two sides of a match can meet.
+ *
+ * Every flyer writes "Chicken Breasts" and the catalogue says "Chicken
+ * Breast". Without this, "Longo's Air-Chilled, Grain-Fed, Boneless, Skinless
+ * Chicken Breasts" scored 0.24 against Boneless Skinless Chicken Breast and
+ * was thrown away as unmatched — measured on the live feed, that single "s"
+ * discarded six of the eight advertised chicken prices in Burlington, and it
+ * is the main reason only 71 of 1,663 catalogue products had ever carried a
+ * price.
+ *
+ * A crude stemmer, deliberately: it is applied identically to both sides, so
+ * it only has to be consistent, not correct English. "Molasses" folding to
+ * "molass" costs nothing because the catalogue folds the same way.
+ */
+export function singularize(token: string): string {
+  if (token.length <= 3) return token;
+  if (token.endsWith("ss") || token.endsWith("us") || token.endsWith("is")) return token;
+  if (token.endsWith("ies")) return `${token.slice(0, -3)}y`;
+  if (/(ch|sh|s|x|z)es$/.test(token)) return token.slice(0, -2);
+  if (token.endsWith("s")) return token.slice(0, -1);
+  return token;
+}
+
 export function tokenize(value: string): string[] {
   return normalizeName(value)
     .split(" ")
-    .filter((t) => t.length > 1 && !STOP_WORDS.has(t));
+    .filter((t) => t.length > 1 && !STOP_WORDS.has(t))
+    .map(singularize);
 }
 
 /** "$5.99" / "5,99" / "599¢" -> cents. Null when there is no real number. */

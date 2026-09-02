@@ -18,7 +18,12 @@ import {
   storeRetailers,
   type KnownRetailer,
 } from "./merchants";
-import { buildFlyerObservations, buildOnlineObservations } from "./deals";
+import {
+  buildFlyerObservations,
+  buildOnlineObservations,
+  findDealsAtOtherStores,
+  findUpcomingDeals,
+} from "./deals";
 import type { MatchableCatalogProduct } from "../matching";
 
 const RETAILERS: KnownRetailer[] = [
@@ -269,6 +274,105 @@ describe("buildFlyerObservations", () => {
         result.skippedExpired +
         result.skippedUnmatched,
     ).toBe(result.seen);
+  });
+});
+
+describe("findDealsAtOtherStores", () => {
+  const base = { retailers: RETAILERS, catalogById: CATALOG_BY_ID, today: "2026-08-30" };
+
+  it("reports the deals the store filter drops", () => {
+    // Measured against the live feed: a search for boneless skinless chicken
+    // breast returned eight advertised prices and six were at stores that
+    // aren't set up here. Dropping them silently is why "where is this on
+    // sale" answered nothing.
+    const result = findDealsAtOtherStores({
+      ...base,
+      groups: [
+        group("chicken-breast", [
+          deal(),
+          deal({ merchantName: "Longos", priceCents: 899 }),
+          deal({ merchantName: "Sobeys", priceCents: 599 }),
+        ]),
+      ],
+    });
+
+    expect(result.map((d) => d.merchantName)).toEqual(["Sobeys", "Longos"]);
+  });
+
+  it("never repeats a store the household already has", () => {
+    const result = findDealsAtOtherStores({
+      ...base,
+      groups: [group("chicken-breast", [deal(), deal()])],
+    });
+    expect(result).toEqual([]);
+  });
+
+  it("holds an unstorable deal to the same expiry and matching bar", () => {
+    const expired = findDealsAtOtherStores({
+      ...base,
+      groups: [group("chicken-breast", [deal({ merchantName: "Longos", validTo: "2026-08-01" })])],
+    });
+    expect(expired).toEqual([]);
+
+    const wrongProduct = findDealsAtOtherStores({
+      ...base,
+      groups: [group("chicken-breast", [deal({ merchantName: "Longos", name: "MYSTERY BOX" })])],
+    });
+    expect(wrongProduct).toEqual([]);
+  });
+
+  it("collapses the same ad repeated across a flyer", () => {
+    const result = findDealsAtOtherStores({
+      ...base,
+      groups: [
+        group("chicken-breast", [
+          deal({ merchantName: "Longos", flyerItemId: "a" }),
+          deal({ merchantName: "Longos", flyerItemId: "b" }),
+        ]),
+      ],
+    });
+    expect(result).toHaveLength(1);
+  });
+});
+
+describe("findUpcomingDeals", () => {
+  const base = { catalogById: CATALOG_BY_ID, today: "2026-08-30" };
+
+  it("reports a flyer that starts in a few days", () => {
+    // The measured case: Food Basics had boneless skinless chicken breast
+    // advertised from the 3rd, and the on-demand check reported nothing at all
+    // because the flyer hadn't started.
+    const result = findUpcomingDeals({
+      ...base,
+      groups: [
+        group("chicken-breast", [deal({ validFrom: "2026-09-03", validTo: "2026-09-10" })]),
+      ],
+    });
+    expect(result).toEqual([
+      { merchantName: "Fortinos", name: "Chicken Breast", priceCents: 399, startsOn: "2026-09-03" },
+    ]);
+  });
+
+  it("leaves a deal that is already running to the stored path", () => {
+    expect(findUpcomingDeals({ ...base, groups: [group("chicken-breast", [deal()])] })).toEqual([]);
+  });
+
+  it("ignores a flyer too far out to plan around", () => {
+    const result = findUpcomingDeals({
+      ...base,
+      groups: [group("chicken-breast", [deal({ validFrom: "2026-11-01", validTo: "2026-11-08" })])],
+    });
+    expect(result).toEqual([]);
+  });
+
+  it("holds an upcoming deal to the same matching bar", () => {
+    const result = findUpcomingDeals({
+      ...base,
+      groups: [
+        group("chicken-breast", [deal({ name: "MYSTERY BOX", validFrom: "2026-09-03", validTo: "2026-09-10" })]),
+      ],
+    });
+    expect(result).toEqual([]);
   });
 });
 

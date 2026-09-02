@@ -5,6 +5,8 @@ import {
   parsePackageSize,
   parsePriceToCents,
   parsePromotionWindow,
+  singularize,
+  tokenize,
 } from "./normalization";
 import { matchToCatalog, type MatchableCatalogProduct } from "./matching";
 import { normalizeLoblawProduct } from "./adapters/loblaw-banner";
@@ -109,9 +111,88 @@ const CATALOG: MatchableCatalogProduct[] = [
   },
 ];
 
+describe("matching real flyer names", () => {
+  // Verbatim from the live Flipp feed for "Boneless Skinless Chicken Breast"
+  // in Burlington. Every one of these was thrown away as UNMATCHED because
+  // "breasts" did not equal "breast".
+  const CHICKEN: MatchableCatalogProduct = {
+    id: "boneless-skinless-chicken-breast",
+    display_name: "Boneless Skinless Chicken Breast",
+    brand: null,
+    category: "Meat & Seafood",
+    subcategory: "Chicken",
+    search_aliases: [],
+    default_unit: null,
+  };
+
+  const names = [
+    "Boneless, Skinless Chicken Breasts",
+    "Longo's Air-Chilled, Grain-Fed, Boneless, Skinless Chicken Breasts",
+    "Maple Leaf Boneless Skinless Chicken Breasts",
+    "COMPLIMENTS Fresh AIR-CHILLED Boneless Skinless Chicken Breasts",
+  ];
+
+  for (const name of names) {
+    it(`recognises "${name}"`, () => {
+      const match = matchToCatalog(
+        {
+          retailerId: "r",
+          retailerLocationId: null,
+          externalProductId: "x",
+          url: null,
+          name,
+          brand: null,
+          observedAt: "2026-09-02T12:00:00Z",
+        },
+        [CHICKEN],
+      );
+      expect(match.catalogProductId).toBe("boneless-skinless-chicken-breast");
+      expect(["MATCHED", "LIKELY_MATCH"]).toContain(match.status);
+    });
+  }
+
+  it("still refuses a flyer line that is not the product", () => {
+    const match = matchToCatalog(
+      {
+        retailerId: "r",
+        retailerLocationId: null,
+        externalProductId: "x",
+        url: null,
+        name: "ASSORTED FROZEN DESSERTS",
+        brand: null,
+        observedAt: "2026-09-02T12:00:00Z",
+      },
+      [CHICKEN],
+    );
+    expect(match.catalogProductId).toBeNull();
+  });
+});
+
 describe("normalization", () => {
   it("normalizes names for comparison", () => {
     expect(normalizeName("Earth's Own  ORIGINAL Almond-Milk")).toBe("earths own original almond milk");
+  });
+
+  it("folds plurals so a flyer name can meet the catalogue", () => {
+    // Real flyer wording from the live feed, against the real catalogue names.
+    expect(singularize("breasts")).toBe("breast");
+    expect(singularize("chips")).toBe("chip");
+    expect(singularize("berries")).toBe("berry");
+    expect(singularize("peaches")).toBe("peach");
+    expect(singularize("boxes")).toBe("box");
+  });
+
+  it("leaves words that only look plural alone", () => {
+    expect(singularize("hummus")).toBe("hummus");
+    expect(singularize("swiss")).toBe("swiss");
+    expect(singularize("gas")).toBe("gas");
+    expect(singularize("chorizo")).toBe("chorizo");
+  });
+
+  it("tokenizes both sides the same way, which is what makes it safe", () => {
+    expect(tokenize("Boneless, Skinless Chicken Breasts")).toEqual(
+      tokenize("Boneless Skinless Chicken Breast"),
+    );
   });
 
   it("parses sale, regular and string prices to cents", () => {

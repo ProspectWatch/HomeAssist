@@ -65,6 +65,105 @@ export type InstacartScanResult =
     }
   | { status: "FAILED"; message: string };
 
+type MarilusObservation = {
+  catalogProductId: string;
+  priceCents: number;
+  unit: string | null;
+  priceText: string;
+  name: string | null;
+  imageUrl: string | null;
+  productId: string;
+  url: string;
+  confidence: number;
+  status: "MATCHED" | "LIKELY_MATCH";
+  method: string;
+};
+
+/**
+ * Looks one product up at Marilu's: search, then re-read the price off the
+ * candidate's own product page with the retailer slug.
+ *
+ * Search prices are another shop's and are thrown away (see parse.ts), so the
+ * second fetch is not optional — it is the only price that belongs to this
+ * store.
+ *
+ * "NOT_STOCKED" is an answer: the store doesn't carry it. "UNAVAILABLE" means
+ * the fetch itself failed, which is a different thing and must not be reported
+ * as an empty shelf.
+ */
+export async function findAtMarilus(input: {
+  query: string;
+  catalogProductId: string;
+  /** Matched against this alone when known, so a search can't drift onto
+   *  a different product. */
+  catalogProduct: MatchableCatalogProduct | undefined;
+  catalog: MatchableCatalogProduct[];
+  retailerId: string;
+  /** Epoch ms after which no further requests are made. */
+  deadline: number;
+}): Promise<MarilusObservation | null | "NOT_STOCKED" | "UNAVAILABLE"> {
+  const { query, catalogProductId, catalogProduct, catalog, retailerId, deadline } = input;
+
+  await pause(REQUEST_PAUSE_MS);
+  const search = await fetchPage(searchUrl(query));
+  if (!search.ok) return "UNAVAILABLE";
+
+  const candidates = parseSearchCandidates(search.html)
+    .filter((c) => c.name)
+    .slice(0, MAX_CANDIDATES_PER_TARGET);
+
+  let sawCandidate = false;
+  for (const candidate of candidates) {
+    if (Date.now() > deadline) break;
+
+    // Match on the candidate's name before spending a request on it, so a
+    // page is only fetched for something plausibly the right product.
+    const match = matchToCatalog(
+      {
+        retailerId,
+        retailerLocationId: null,
+        externalProductId: candidate.productId,
+        url: productUrl(candidate.productId, candidate.slug, MARILUS_SLUG),
+        name: candidate.name!,
+        brand: null,
+        observedAt: new Date().toISOString(),
+      },
+      catalogProduct ? [catalogProduct] : catalog,
+    );
+    if (
+      match.catalogProductId !== catalogProductId ||
+      (match.status !== "MATCHED" && match.status !== "LIKELY_MATCH")
+    ) {
+      continue;
+    }
+    sawCandidate = true;
+
+    await pause(REQUEST_PAUSE_MS);
+    const page = await fetchPage(productUrl(candidate.productId, candidate.slug, MARILUS_SLUG));
+    if (!page.ok) return "UNAVAILABLE";
+
+    const priced = parseProductPage(page.html);
+    if (!priced) continue;
+
+    return {
+      catalogProductId,
+      priceCents: priced.priceCents,
+      unit: priced.unit,
+      priceText: priced.priceText,
+      name: candidate.name,
+      imageUrl: priced.imageUrl,
+      productId: candidate.productId,
+      url: productUrl(candidate.productId, candidate.slug, MARILUS_SLUG),
+      confidence: match.confidence,
+      status: match.status,
+      method: match.matchMethod,
+    };
+  }
+
+  // Marilu's does not carry it. That is an answer, not a gap to fill.
+  return sawCandidate ? "NOT_STOCKED" : null;
+}
+
 /**
  * @param client the scheduled run passes the service-role client. Without it
  * this falls back to the request-scoped one, which in a cron has no session at
@@ -166,65 +265,21 @@ export async function runInstacartScan(
     if (observations.has(target.catalogProductId)) continue;
     requested += 1;
 
-    await pause(REQUEST_PAUSE_MS);
-    const search = await fetchPage(searchUrl(target.query));
-    if (!search.ok) break;
-
     const catalogProduct = catalog.find((c) => c.id === target.catalogProductId);
-    const candidates = parseSearchCandidates(search.html)
-      .filter((c) => c.name)
-      .slice(0, MAX_CANDIDATES_PER_TARGET);
-
-    for (const candidate of candidates) {
-      if (spent() > BUDGET_MS) break;
-
-      // Match on the candidate's name before spending a request on it, so a
-      // page is only fetched for something plausibly the right product.
-      const match = matchToCatalog(
-        {
-          retailerId: retailer.id,
-          retailerLocationId: null,
-          externalProductId: candidate.productId,
-          url: productUrl(candidate.productId, candidate.slug, MARILUS_SLUG),
-          name: candidate.name!,
-          brand: null,
-          observedAt: new Date().toISOString(),
-        },
-        catalogProduct ? [catalogProduct] : catalog,
-      );
-      if (
-        match.catalogProductId !== target.catalogProductId ||
-        (match.status !== "MATCHED" && match.status !== "LIKELY_MATCH")
-      ) {
-        continue;
-      }
-
-      await pause(REQUEST_PAUSE_MS);
-      const page = await fetchPage(productUrl(candidate.productId, candidate.slug, MARILUS_SLUG));
-      if (!page.ok) break;
-
-      const priced = parseProductPage(page.html);
-      if (!priced) {
-        // Marilu's does not carry it. That is an answer, not a gap to fill.
-        notStocked += 1;
-        continue;
-      }
-
-      observations.set(target.catalogProductId, {
-        catalogProductId: target.catalogProductId,
-        priceCents: priced.priceCents,
-        unit: priced.unit,
-        priceText: priced.priceText,
-        name: candidate.name,
-        imageUrl: priced.imageUrl,
-        productId: candidate.productId,
-        url: productUrl(candidate.productId, candidate.slug, MARILUS_SLUG),
-        confidence: match.confidence,
-        status: match.status,
-        method: match.matchMethod,
-      });
-      break;
+    const found = await findAtMarilus({
+      query: target.query,
+      catalogProductId: target.catalogProductId,
+      catalogProduct,
+      catalog,
+      retailerId: retailer.id,
+      deadline: startedAt + BUDGET_MS,
+    });
+    if (found === "UNAVAILABLE") break;
+    if (found === "NOT_STOCKED") {
+      notStocked += 1;
+      continue;
     }
+    if (found) observations.set(target.catalogProductId, found);
   }
 
   const rows = [...observations.values()];

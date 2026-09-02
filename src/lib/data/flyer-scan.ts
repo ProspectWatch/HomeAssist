@@ -17,7 +17,7 @@ import {
 } from "@/lib/retailers/flyers/deals";
 import type { KnownRetailer } from "@/lib/retailers/flyers/merchants";
 import type { MatchableCatalogProduct } from "@/lib/retailers/matching";
-import { AdapterError } from "@/lib/retailers/types";
+import { AdapterError, type PriceObservationRecord } from "@/lib/retailers/types";
 import { getLocationContext, getScanTargets, type ScanClient } from "@/lib/data/retailer-scan";
 import type { ScanTarget } from "@/lib/retailers/ingestion";
 
@@ -225,6 +225,103 @@ async function rotateByStaleness(targets: ScanTarget[], supabase: ScanClient): P
 }
 
 /**
+ * Writes price observations, skipping ones already recorded today.
+ *
+ * The same offer must not be recorded twice in a day. A unique index enforces
+ * that, but it is built on expressions (coalesce over the nullable columns),
+ * and PostgREST's ignoreDuplicates targets the primary key only — so a
+ * collision with that index surfaced as a hard error and failed the whole
+ * scan. Re-checking prices an hour later is a completely normal thing to do,
+ * and it was breaking every time.
+ *
+ * So duplicates are resolved here rather than left to ON CONFLICT: first
+ * against rows already stored today, then within the batch itself.
+ *
+ * Shared with the on-demand single-product check, which hits exactly the same
+ * index for exactly the same reason.
+ */
+export async function storeObservations(
+  supabase: ScanClient,
+  householdId: string,
+  observations: PriceObservationRecord[],
+): Promise<{ ok: true; stored: number } | { ok: false; message: string }> {
+  if (observations.length === 0) return { ok: true, stored: 0 };
+
+  const rows = observations.map((o) => ({
+    household_id: householdId,
+    catalog_product_id: o.catalogProductId,
+    retailer_id: o.retailerId,
+    external_product_id: o.externalProductId,
+    observed_price_cents: o.observedPriceCents,
+    regular_price_cents: o.regularPriceCents,
+    unit_price_text: o.unitPriceText,
+    package_size: o.packageSize,
+    unit: o.unit,
+    availability: o.availability,
+    promotion_text: o.promotionText,
+    valid_from: o.validFrom,
+    valid_until: o.validUntil,
+    source_url: o.sourceUrl,
+    source_type: o.sourceType,
+    match_confidence: o.matchConfidence,
+    match_method: o.matchMethod,
+    match_status: o.matchStatus,
+    raw_name: o.rawName,
+    image_url: o.imageUrl,
+    observed_at: o.observedAt,
+  }));
+
+  const today = todayISO();
+  const indexKey = (row: {
+    retailer_id: string;
+    external_product_id: string | null;
+    catalog_product_id: string | null;
+    observed_price_cents: number;
+    observed_on: string;
+  }) =>
+    [
+      row.retailer_id,
+      row.external_product_id ?? "",
+      row.catalog_product_id ?? "",
+      row.observed_price_cents,
+      row.observed_on,
+    ].join("|");
+
+  const { data: alreadyStored } = await supabase
+    .from("retailer_price_observations")
+    .select("retailer_id, external_product_id, catalog_product_id, observed_price_cents, observed_on")
+    .eq("observed_on", today);
+
+  const seen = new Set(
+    ((alreadyStored ?? []) as {
+      retailer_id: string;
+      external_product_id: string | null;
+      catalog_product_id: string | null;
+      observed_price_cents: number;
+      observed_on: string;
+    }[]).map(indexKey),
+  );
+
+  const fresh: typeof rows = [];
+  for (const row of rows) {
+    const key = indexKey({ ...row, observed_on: row.observed_at.slice(0, 10) });
+    if (seen.has(key)) continue;
+    seen.add(key);
+    fresh.push(row);
+  }
+  if (fresh.length === 0) return { ok: true, stored: 0 };
+
+  const { error } = await supabase.from("retailer_price_observations").insert(fresh);
+  // 23505 means another writer got there first — the price is recorded, which
+  // is the outcome we wanted. Anything else is a real failure.
+  if (error) {
+    if (error.code === "23505") return { ok: true, stored: 0 };
+    return { ok: false, message: error.message };
+  }
+  return { ok: true, stored: fresh.length };
+}
+
+/**
  * @param client  Supply an admin client to scan without a signed-in user
  *                (the scheduled run). Omitted, the scan runs as the caller,
  *                inside RLS.
@@ -322,96 +419,17 @@ export async function runFlyerScan(householdId: string, client?: ScanClient): Pr
     observedAt,
   });
 
-  let stored = 0;
   const allObservations = [...summary.observations, ...onlineSummary.observations];
-  if (allObservations.length > 0) {
-    const rows = allObservations.map((o) => ({
-      household_id: householdId,
-      catalog_product_id: o.catalogProductId,
-      retailer_id: o.retailerId,
-      external_product_id: o.externalProductId,
-      observed_price_cents: o.observedPriceCents,
-      regular_price_cents: o.regularPriceCents,
-      package_size: o.packageSize,
-      unit: o.unit,
-      promotion_text: o.promotionText,
-      valid_from: o.validFrom,
-      valid_until: o.validUntil,
-      source_url: o.sourceUrl,
-      source_type: o.sourceType,
-      match_confidence: o.matchConfidence,
-      match_method: o.matchMethod,
-      match_status: o.matchStatus,
-      raw_name: o.rawName,
-      image_url: o.imageUrl,
-      observed_at: o.observedAt,
-    }));
-    // The same offer must not be recorded twice in a day. A unique index
-    // enforces that, but it is built on expressions (coalesce over the
-    // nullable columns), and PostgREST's ignoreDuplicates targets the primary
-    // key only — so a collision with that index surfaced as a hard error and
-    // failed the whole scan. Re-checking prices an hour later is a completely
-    // normal thing to do, and it was breaking every time.
-    //
-    // So duplicates are resolved here rather than left to ON CONFLICT: first
-    // against rows already stored today, then within the batch itself.
-    const today = todayISO();
-    const indexKey = (row: {
-      retailer_id: string;
-      external_product_id: string | null;
-      catalog_product_id: string | null;
-      observed_price_cents: number;
-      observed_on: string;
-    }) =>
-      [
-        row.retailer_id,
-        row.external_product_id ?? "",
-        row.catalog_product_id ?? "",
-        row.observed_price_cents,
-        row.observed_on,
-      ].join("|");
-
-    const { data: alreadyStored } = await supabase
-      .from("retailer_price_observations")
-      .select("retailer_id, external_product_id, catalog_product_id, observed_price_cents, observed_on")
-      .eq("observed_on", today);
-
-    const seen = new Set(
-      ((alreadyStored ?? []) as {
-        retailer_id: string;
-        external_product_id: string | null;
-        catalog_product_id: string | null;
-        observed_price_cents: number;
-        observed_on: string;
-      }[]).map(indexKey),
-    );
-
-    const fresh: typeof rows = [];
-    for (const row of rows) {
-      const key = indexKey({ ...row, observed_on: row.observed_at.slice(0, 10) });
-      if (seen.has(key)) continue;
-      seen.add(key);
-      fresh.push(row);
-    }
-
-    if (fresh.length > 0) {
-      const { error } = await supabase.from("retailer_price_observations").insert(fresh);
-      if (error) {
-        // 23505 means another writer got there first — the price is recorded,
-        // which is the outcome we wanted. Anything else is a real failure.
-        if (error.code !== "23505") {
-          return finish({
-            status: "FAILED",
-            reason: "UNKNOWN",
-            message: error.message,
-            targetsRequested: targets.length,
-          });
-        }
-      } else {
-        stored = fresh.length;
-      }
-    }
+  const write = await storeObservations(supabase, householdId, allObservations);
+  if (!write.ok) {
+    return finish({
+      status: "FAILED",
+      reason: "UNKNOWN",
+      message: write.message,
+      targetsRequested: targets.length,
+    });
   }
+  const stored = write.stored;
 
   return finish({
     status: "COMPLETE",
