@@ -5,6 +5,12 @@ import { getCurrentHouseholdId } from "@/lib/supabase/household";
 import { searchCatalogProducts } from "@/lib/data/catalog";
 import { getPriceBook } from "@/lib/data/price-book";
 import { formatCents } from "@/lib/money";
+import {
+  bestOfferByProduct,
+  classifySource,
+  describeOffer,
+  type ProductOffer,
+} from "@/lib/pricing/best-offer";
 
 /**
  * Household-wide search.
@@ -25,7 +31,11 @@ export type SearchResult = {
   title: string;
   /** One line of real context. Never padding — omitted when there's nothing true to say. */
   sub: string | null;
-  /** A current flyer price, when there is one. */
+  /**
+   * The best price the app can currently stand behind, from any source — a
+   * flyer sale, a shop's listed price, or what was last paid. Null when there
+   * is none, rather than a guess.
+   */
   deal: string | null;
   href: string | null;
   isRegularBuy: boolean;
@@ -72,36 +82,48 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
       ((prefRes.data ?? []) as { scope_key: string }[]).map((r) => r.scope_key),
     );
 
-    // Current flyer prices for exactly the products this search returned.
+    // Every current price for exactly the products this search returned —
+    // flyers, the shops' own listings (Marilu's included), and receipts. This
+    // used to filter to FLYER, which hid the 30 Marilu's prices sitting in the
+    // same table from a search for anything Marilu's sells.
     const productIds = products.map((p) => p.id);
-    const dealsByProduct = new Map<string, { priceCents: number; retailer: string | null }>();
+    const offers: ProductOffer[] = [];
     if (productIds.length > 0) {
-      const { data: dealRows } = await supabase
+      const { data: priceRows } = await supabase
         .from("retailer_price_observations")
-        .select("catalog_product_id, observed_price_cents, valid_until, retailer:retailers(name)")
+        .select(
+          "catalog_product_id, observed_price_cents, observed_at, valid_until, source_type, retailer:retailers(name)",
+        )
         .eq("household_id", householdId)
-        .eq("source_type", "FLYER")
         .in("catalog_product_id", productIds)
-        .or(`valid_until.gte.${today},valid_until.is.null`)
-        .order("observed_price_cents", { ascending: true });
-      type DealRow = {
-        catalog_product_id: string;
+        .order("observed_at", { ascending: false })
+        .limit(600);
+
+      type PriceRow = {
+        catalog_product_id: string | null;
         observed_price_cents: number;
+        observed_at: string;
+        valid_until: string | null;
+        source_type: string;
         retailer: { name: string } | null;
       };
-      for (const row of (dealRows ?? []) as unknown as DealRow[]) {
-        // Ordered cheapest-first, so the first hit per product is the best.
-        if (dealsByProduct.has(row.catalog_product_id)) continue;
-        dealsByProduct.set(row.catalog_product_id, {
+      for (const row of (priceRows ?? []) as unknown as PriceRow[]) {
+        if (!row.catalog_product_id) continue;
+        offers.push({
+          catalogProductId: row.catalog_product_id,
           priceCents: row.observed_price_cents,
-          retailer: row.retailer?.name ?? null,
+          retailerName: row.retailer?.name ?? null,
+          source: classifySource(row.source_type),
+          observedOn: row.observed_at.slice(0, 10),
+          validUntil: row.valid_until ? row.valid_until.slice(0, 10) : null,
         });
       }
     }
+    const bestByProduct = bestOfferByProduct(offers, today);
 
     const productItems: SearchResult[] = products.map((product) => {
       const entry = book.get(product.id);
-      const deal = dealsByProduct.get(product.id);
+      const offer = bestByProduct.get(product.id);
       const parts = [
         product.brand,
         product.subcategory ?? product.category,
@@ -118,7 +140,7 @@ export async function searchHousehold(query: string): Promise<SearchGroup[]> {
         id: product.id,
         title: product.display_name,
         sub: parts.join(" · ") || null,
-        deal: deal ? `${formatCents(deal.priceCents)}${deal.retailer ? ` at ${deal.retailer}` : ""}` : null,
+        deal: offer ? describeOffer(offer, today) : null,
         href: "/shop/deals",
         isRegularBuy: regularBuys.has(product.id),
       };
