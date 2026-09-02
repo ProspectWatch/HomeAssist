@@ -116,6 +116,21 @@ describe("describeOffer", () => {
   it("leaves a fresh price undated", () => {
     expect(describeOffer(offer({ observedOn: "2026-08-28" }), TODAY)).not.toContain("seen");
   });
+
+  it("says when the price may belong to another product in the same ad", () => {
+    // Real flyer line: "GOURMETA THAI SHRIMP, NORTHERN KING WHOLE TILAPIA OR
+    // CHELSEA PINK SALMON FILLET" at $7.49. Stored against Salmon Fillet, it
+    // read as a $7.49 salmon price, which it may well not be.
+    expect(describeOffer(offer({ coversSeveralItems: true }), TODAY)).toBe(
+      "on sale $4.99 at Food Basics · ad covers several items",
+    );
+  });
+
+  it("adds nothing when the ad is for one product", () => {
+    expect(describeOffer(offer({ coversSeveralItems: false }), TODAY)).toBe(
+      "on sale $4.99 at Food Basics",
+    );
+  });
 });
 
 describe("ageInDays", () => {

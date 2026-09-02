@@ -159,6 +159,149 @@ export function buildFlyerObservations(input: {
 }
 
 /**
+ * Flyer deals for the product at stores that are not set up as retailers.
+ *
+ * `buildFlyerObservations` drops these on purpose: an observation has to name
+ * a real retailer row, and price history must not fill up with stores the
+ * household has never mentioned.
+ *
+ * But dropping them silently is what makes "where is this on sale" feel
+ * broken. Measured on the real feed, a search for boneless skinless chicken
+ * breast returned eight advertised prices and six were at stores not in the
+ * table — Longo's, Sobeys, M&M, Real Canadian Superstore. Those are real ads
+ * in real Burlington flyers and they are the answer to the question.
+ *
+ * So they are reported and not stored. Same expiry rule and same matching bar
+ * as a stored observation — a deal that isn't this product is not shown just
+ * because it can't be saved.
+ */
+export type UnstoredDeal = {
+  merchantName: string;
+  name: string;
+  priceCents: number;
+  validUntil: string | null;
+};
+
+export function findDealsAtOtherStores(input: {
+  groups: ResultGroup<FlyerDeal>[];
+  retailers: KnownRetailer[];
+  catalogById: Map<string, MatchableCatalogProduct>;
+  today: string;
+}): UnstoredDeal[] {
+  const { groups, retailers, catalogById, today } = input;
+  // Every retailer, not just the stores: a deal at a known online retailer is
+  // already handled elsewhere and must not be repeated here.
+  const index = buildMerchantIndex(retailers);
+  const out: UnstoredDeal[] = [];
+  const seen = new Set<string>();
+
+  for (const group of groups) {
+    const candidate = catalogById.get(group.catalogProductId);
+    if (!candidate) continue;
+    for (const deal of group.items) {
+      if (resolveMerchant(index, deal.merchantName)) continue;
+      if (!isCurrentlyValid(deal, today)) continue;
+
+      const match = matchToCatalog(
+        {
+          retailerId: "",
+          retailerLocationId: null,
+          externalProductId: deal.flyerItemId ?? "",
+          url: deal.sourceUrl,
+          name: deal.name,
+          brand: null,
+          observedAt: today,
+        },
+        [candidate],
+      );
+      if (match.status !== "MATCHED" && match.status !== "LIKELY_MATCH") continue;
+
+      const key = `${deal.merchantName}|${deal.priceCents}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        merchantName: deal.merchantName,
+        name: deal.name,
+        priceCents: deal.priceCents,
+        validUntil: deal.validTo,
+      });
+    }
+  }
+
+  return out.sort((a, b) => a.priceCents - b.priceCents);
+}
+
+/**
+ * Deals whose flyer hasn't started yet.
+ *
+ * `isCurrentlyValid` rejects these, correctly: a stored observation must be a
+ * price you can go and pay today. But "boneless skinless chicken breast is on
+ * at Food Basics from Friday" is exactly what someone planning a shop wants,
+ * and dropping it is why an on-demand check could look at a live feed carrying
+ * three advertised prices for a product and report nothing.
+ *
+ * Reported, never stored, and always carrying the date it starts.
+ */
+export type UpcomingDeal = {
+  merchantName: string;
+  name: string;
+  priceCents: number;
+  /** YYYY-MM-DD, the first day the price applies. */
+  startsOn: string;
+};
+
+/** Beyond this the flyer is too far off to plan around. */
+const UPCOMING_HORIZON_DAYS = 10;
+
+export function findUpcomingDeals(input: {
+  groups: ResultGroup<FlyerDeal>[];
+  catalogById: Map<string, MatchableCatalogProduct>;
+  today: string;
+}): UpcomingDeal[] {
+  const { groups, catalogById, today } = input;
+  const horizon = new Date(`${today}T12:00:00Z`);
+  horizon.setUTCDate(horizon.getUTCDate() + UPCOMING_HORIZON_DAYS);
+  const horizonISO = horizon.toISOString().slice(0, 10);
+
+  const out: UpcomingDeal[] = [];
+  const seen = new Set<string>();
+
+  for (const group of groups) {
+    const candidate = catalogById.get(group.catalogProductId);
+    if (!candidate) continue;
+    for (const deal of group.items) {
+      if (!deal.validFrom || deal.validFrom <= today || deal.validFrom > horizonISO) continue;
+
+      const match = matchToCatalog(
+        {
+          retailerId: "",
+          retailerLocationId: null,
+          externalProductId: deal.flyerItemId ?? "",
+          url: deal.sourceUrl,
+          name: deal.name,
+          brand: null,
+          observedAt: today,
+        },
+        [candidate],
+      );
+      if (match.status !== "MATCHED" && match.status !== "LIKELY_MATCH") continue;
+
+      const key = `${deal.merchantName}|${deal.priceCents}|${deal.validFrom}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        merchantName: deal.merchantName,
+        name: deal.name,
+        priceCents: deal.priceCents,
+        startsOn: deal.validFrom,
+      });
+    }
+  }
+
+  return out.sort((a, b) => a.priceCents - b.priceCents);
+}
+
+/**
  * The listing that best represents what a product costs at one retailer.
  *
  * A website search for "Bacon" returns dozens of real listings at one shop —

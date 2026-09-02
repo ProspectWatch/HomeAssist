@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { searchCatalog } from "@/lib/catalog-search";
 import { isBrandRigidity, type RegularBuy } from "@/lib/household/regular-buys";
 
 // The generic, reusable product dictionary (catalog_products) — distinct
@@ -61,25 +62,39 @@ export async function getCatalogSearchIndex(): Promise<CatalogProduct[]> {
 }
 
 /**
- * Server-side search fallback (SSR pages, no-JS path). The trigram index
- * on catalog_products.search_text backs this; the browser normally uses
- * the cached full index instead for zero-latency typeahead.
+ * Catalogue products matching a query, best match first.
+ *
+ * Server-side search (SSR pages, no-JS path). The trigram index on
+ * catalog_products.search_text backs this; the browser normally uses the
+ * cached full index instead for zero-latency typeahead.
+ *
+ * The database narrows and `searchCatalog` ranks. Ordering by display_name was
+ * the bug behind "search is not working very well": a search for chicken
+ * returned 37 products alphabetically, so Chicken Broth came before Boneless
+ * Skinless Chicken Breast and the thing you meant was somewhere down the page.
+ * The ranker already existed, was already tested, and nothing on this screen
+ * was calling it.
+ *
+ * A wider net is pulled from the database than is returned, because ranking
+ * can only order what it is given — narrowing to 25 alphabetically and then
+ * sorting those is still alphabetical selection.
  */
 export async function searchCatalogProducts(query: string, limit = 20): Promise<CatalogProduct[]> {
   const q = query.trim();
   if (!q) return [];
   try {
     const supabase = await createClient();
-    const like = `%${q.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim()}%`;
-    const { data, error } = await supabase
-      .from("catalog_products")
-      .select(CATALOG_FIELDS)
-      .eq("active", true)
-      .ilike("search_text", like)
-      .order("display_name", { ascending: true })
-      .limit(limit);
+    const terms = q.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim().split(" ").filter(Boolean);
+    if (terms.length === 0) return [];
+
+    // Every term must appear somewhere, which is the same rule the ranker
+    // applies — "heinz ketchup" should not pull back every ketchup.
+    let request = supabase.from("catalog_products").select(CATALOG_FIELDS).eq("active", true);
+    for (const term of terms) request = request.ilike("search_text", `%${term}%`);
+
+    const { data, error } = await request.limit(200);
     if (error || !data) return [];
-    return data as unknown as CatalogProduct[];
+    return searchCatalog(data as unknown as CatalogProduct[], q, limit);
   } catch {
     return [];
   }

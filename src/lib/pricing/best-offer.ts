@@ -31,6 +31,13 @@ export type ProductOffer = {
   observedOn: string;
   /** YYYY-MM-DD, or null when the price has no stated end. */
   validUntil: string | null;
+  /**
+   * True when the flyer line advertises several products at once — "THAI
+   * SHRIMP, WHOLE TILAPIA OR PINK SALMON FILLET". The price is real, but it
+   * may belong to one of the others, so it is never presented as this
+   * product's price without saying so.
+   */
+  coversSeveralItems?: boolean;
 };
 
 export function classifySource(sourceType: string): OfferSource {
@@ -102,5 +109,6 @@ export function describeOffer(offer: ProductOffer, today: string): string {
   const when = age > FRESH_DAYS ? ` · seen ${offer.observedOn}` : "";
   const label =
     offer.source === "FLYER" ? "on sale " : offer.source === "RECEIPT" ? "you paid " : "";
-  return `${label}${money(offer.priceCents)}${where}${when}`;
+  const caveat = offer.coversSeveralItems ? " · ad covers several items" : "";
+  return `${label}${money(offer.priceCents)}${where}${when}${caveat}`;
 }
